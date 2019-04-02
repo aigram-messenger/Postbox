@@ -284,6 +284,35 @@ private func updatedRenderedPeer(_ renderedPeer: RenderedPeer, updatedPeers: [Pe
     return nil
 }
 
+private func isIncluded(_ entry: MutableChatListEntry, with filter: GroupingFilter) -> Bool {
+    switch entry {
+    case .IntermediateMessageEntry, .HoleEntry, .IntermediateGroupReferenceEntry:
+        return true
+    case .GroupReferenceEntry:
+        print(entry)
+        return true
+    case let .MessageEntry(_, _, _, _, _, renderedPeer, _):
+        // TODO: Что будет, если пользователь не подтянут в кеш? Как это фильтровать?
+        if let peer = renderedPeer.peer {
+            return filter.isIncluded(peer)
+        } else {
+            return filter.isIncluded(renderedPeer.peerId)
+        }
+    }
+}
+
+private func filtered(entries: [MutableChatListEntry], with filter: GroupingFilter) -> [MutableChatListEntry] {
+    return entries.filter {
+        isIncluded($0, with: filter)
+    }
+}
+
+private func filtered(entry: MutableChatListEntry?, with filter: GroupingFilter) -> MutableChatListEntry? {
+    return entry.flatMap {
+        isIncluded($0, with: filter) ? $0 : nil
+    }
+}
+
 final class MutableChatListView {
     let groupId: PeerGroupId?
     private let summaryComponents: ChatListEntrySummaryComponents
@@ -293,21 +322,30 @@ final class MutableChatListView {
     fileprivate var later: MutableChatListEntry?
     fileprivate var entries: [MutableChatListEntry]
     private var count: Int
+
+    private let filter: GroupingFilter
     
-    init(postbox: Postbox, groupId: PeerGroupId?, earlier: MutableChatListEntry?, entries: [MutableChatListEntry], later: MutableChatListEntry?, count: Int, summaryComponents: ChatListEntrySummaryComponents) {
+    init(postbox: Postbox, groupId: PeerGroupId?, earlier: MutableChatListEntry?, entries: [MutableChatListEntry], later: MutableChatListEntry?, count: Int, summaryComponents: ChatListEntrySummaryComponents, filter: GroupingFilter) {
         self.groupId = groupId
-        self.earlier = earlier
-        self.entries = entries
-        self.later = later
+
+        self.earlier = filtered(entry: earlier, with: filter)
+        self.entries = filtered(entries: entries, with: filter)
+        self.later = filtered(entry: later, with: filter)
+
         self.count = count
         self.summaryComponents = summaryComponents
         self.additionalItemEntries = []
+        self.filter = filter
         if groupId == nil {
             let itemIds = postbox.additionalChatListItemsTable.get()
-            self.additionalItemIds = Set(itemIds)
+            self.additionalItemIds = []
             for peerId in itemIds {
                 if let entry = postbox.chatListTable.getStandalone(peerId: peerId, messageHistoryTable: postbox.messageHistoryTable) {
-                    self.additionalItemEntries.append(MutableChatListEntry(entry, readStateTable: postbox.readStateTable))
+                    let entry = MutableChatListEntry(entry, readStateTable: postbox.readStateTable)
+                    if isIncluded(entry, with: filter) {
+                        self.additionalItemEntries.append(entry)
+                        additionalItemIds.insert(peerId)
+                    }
                 }
             }
         } else {
@@ -321,7 +359,11 @@ final class MutableChatListView {
             index = self.entries[self.entries.count / 2].index
         }
         
-        let (entries, earlier, later) = postbox.fetchAroundChatEntries(groupId: self.groupId, index: index, count: self.entries.count)
+        let (_entries, _earlier, _later) = postbox.fetchAroundChatEntries(groupId: self.groupId, index: index, count: self.entries.count)
+
+        let entries = filtered(entries: _entries, with: filter)
+        let earlier = filtered(entry: _earlier, with: filter)
+        let later = filtered(entry: _later, with: filter)
         
         if entries != self.entries || earlier != self.earlier || later != self.later {
             self.entries = entries
@@ -494,7 +536,10 @@ final class MutableChatListView {
             self.additionalItemEntries.removeAll()
             for peerId in postbox.additionalChatListItemsTable.get() {
                 if let entry = postbox.chatListTable.getStandalone(peerId: peerId, messageHistoryTable: postbox.messageHistoryTable) {
-                    self.additionalItemEntries.append(MutableChatListEntry(entry, readStateTable: postbox.readStateTable))
+                    let entry = MutableChatListEntry(entry, readStateTable: postbox.readStateTable)
+                    if isIncluded(entry, with: filter) {
+                        self.additionalItemEntries.append(entry)
+                    }
                 }
             }
             hasChanges = true
@@ -503,6 +548,10 @@ final class MutableChatListView {
     }
     
     func add(_ entry: MutableChatListEntry) -> Bool {
+        guard isIncluded(entry, with: filter) else {
+            return false
+        }
+
         if self.entries.count == 0 {
             self.entries.append(entry)
             return true
@@ -639,10 +688,16 @@ final class MutableChatListView {
             }
             
             if let later = self.later {
-                addedEntries += postbox.fetchLaterChatEntries(groupId: self.groupId, index: later.index.predecessor, count: self.count)
+                addedEntries += filtered(
+                    entries: postbox.fetchLaterChatEntries(groupId: self.groupId, index: later.index.predecessor, count: self.count),
+                    with: filter
+                )
             }
             if let earlier = self.earlier {
-                addedEntries += postbox.fetchEarlierChatEntries(groupId: self.groupId, index: earlier.index.successor, count: self.count)
+                addedEntries += filtered(
+                    entries:postbox.fetchEarlierChatEntries(groupId: self.groupId, index: earlier.index.successor, count: self.count),
+                    with: filter
+                )
             }
             
             addedEntries += self.entries
@@ -691,7 +746,10 @@ final class MutableChatListView {
                     earlyId = self.entries[i].index
                 }
                 
-                let earlierEntries = postbox.fetchEarlierChatEntries(groupId: self.groupId, index: earlyId, count: 1)
+                let earlierEntries = filtered(
+                    entries: postbox.fetchEarlierChatEntries(groupId: self.groupId, index: earlyId, count: 1),
+                    with: filter
+                )
                 self.earlier = earlierEntries.first
             }
             
@@ -702,7 +760,10 @@ final class MutableChatListView {
                     laterId = self.entries[i].index
                 }
                 
-                let laterEntries = postbox.fetchLaterChatEntries(groupId: self.groupId, index: laterId, count: 1)
+                let laterEntries = filtered(
+                    entries: postbox.fetchLaterChatEntries(groupId: self.groupId, index: laterId, count: 1),
+                    with: filter
+                )
                 self.later = laterEntries.first
             }
         }
@@ -766,16 +827,29 @@ final class MutableChatListView {
     }
     
     func render(postbox: Postbox, renderMessage: (IntermediateMessage) -> Message, getPeer: (PeerId) -> Peer?, getPeerNotificationSettings: (PeerId) -> PeerNotificationSettings?) {
-        for i in 0 ..< self.entries.count {
-            if let updatedEntry = self.renderEntry(self.entries[i], postbox: postbox, renderMessage: renderMessage, getPeer: getPeer, getPeerNotificationSettings: getPeerNotificationSettings) {
-                self.entries[i] = updatedEntry
+        entries = entries
+            .compactMap {
+                renderEntry(
+                    $0,
+                    postbox: postbox,
+                    renderMessage: renderMessage,
+                    getPeer: getPeer,
+                    getPeerNotificationSettings: getPeerNotificationSettings
+                ) ?? $0
             }
-        }
-        for i in 0 ..< self.additionalItemEntries.count {
-            if let updatedEntry = self.renderEntry(self.additionalItemEntries[i], postbox: postbox, renderMessage: renderMessage, getPeer: getPeer, getPeerNotificationSettings: getPeerNotificationSettings) {
-                self.additionalItemEntries[i] = updatedEntry
+            .filter { isIncluded($0, with: filter) }
+
+        additionalItemEntries = additionalItemEntries
+            .compactMap {
+                renderEntry(
+                    $0,
+                    postbox: postbox,
+                    renderMessage: renderMessage,
+                    getPeer: getPeer,
+                    getPeerNotificationSettings: getPeerNotificationSettings
+                ) ?? $0
             }
-        }
+            .filter { isIncluded($0, with: filter) }
     }
 }
 

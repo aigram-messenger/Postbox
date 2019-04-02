@@ -2703,15 +2703,19 @@ public final class Postbox {
         } |> switchToLatest
     }
     
-    public func tailChatListView(groupId: PeerGroupId?, count: Int, summaryComponents: ChatListEntrySummaryComponents) -> Signal<(ChatListView, ViewUpdateType), NoError> {
-        return self.aroundChatListView(groupId: groupId, index: ChatListIndex.absoluteUpperBound, count: count, summaryComponents: summaryComponents)
+    public func tailChatListView(groupId: PeerGroupId?, count: Int, summaryComponents: ChatListEntrySummaryComponents, filter: GroupingFilter) -> Signal<(ChatListView, ViewUpdateType), NoError> {
+        return self.aroundChatListView(groupId: groupId, index: ChatListIndex.absoluteUpperBound, count: count, summaryComponents: summaryComponents, filter: filter)
     }
     
-    public func aroundChatListView(groupId: PeerGroupId?, index: ChatListIndex, count: Int, summaryComponents: ChatListEntrySummaryComponents) -> Signal<(ChatListView, ViewUpdateType), NoError> {
+    public func aroundChatListView(groupId: PeerGroupId?, index: ChatListIndex, count: Int, summaryComponents: ChatListEntrySummaryComponents, filter: GroupingFilter) -> Signal<(ChatListView, ViewUpdateType), NoError> {
+        filter.fetchPeer = { [weak peerTable] in
+            peerTable?.get($0)
+        }
+        
         return self.transactionSignal { subscriber, transaction in
             let (entries, earlier, later) = self.fetchAroundChatEntries(groupId: groupId, index: index, count: count)
-            
-            let mutableView = MutableChatListView(postbox: self, groupId: groupId, earlier: earlier, entries: entries, later: later, count: count, summaryComponents: summaryComponents)
+
+            let mutableView = MutableChatListView(postbox: self, groupId: groupId, earlier: earlier, entries: entries, later: later, count: count, summaryComponents: summaryComponents, filter: filter)
             mutableView.render(postbox: self, renderMessage: self.renderIntermediateMessage, getPeer: { id in
                 return self.peerTable.get(id)
             }, getPeerNotificationSettings: { self.peerNotificationSettingsTable.getEffective($0) })
@@ -3418,4 +3422,11 @@ public final class Postbox {
             }
         }).start()
     }
+}
+
+public protocol GroupingFilter: class {
+    var fetchPeer: ((PeerId) -> Peer?)? { get set }
+
+    func isIncluded(_ peer: Peer) -> Bool
+    func isIncluded(_ peerId: PeerId) -> Bool
 }
