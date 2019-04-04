@@ -944,7 +944,7 @@ func debugRestoreState(basePath:String, name: String) {
     }
 }
 
-public func openPostbox(basePath: String, globalMessageIdsNamespace: MessageId.Namespace, seedConfiguration: SeedConfiguration) -> Signal<PostboxResult, NoError> {
+public func openPostbox(basePath: String, globalMessageIdsNamespace: MessageId.Namespace, seedConfiguration: SeedConfiguration, isIncluded: @escaping IsIncludedClosure) -> Signal<PostboxResult, NoError> {
     let queue = Queue(name: "org.telegram.postbox.Postbox")
     return Signal { subscriber in
         queue.async {
@@ -987,7 +987,7 @@ public func openPostbox(basePath: String, globalMessageIdsNamespace: MessageId.N
                     metadataTable.setUserVersion(currentUserVersion)
                 }
                 
-                subscriber.putNext(.postbox(Postbox(queue: queue, basePath: basePath, globalMessageIdsNamespace: globalMessageIdsNamespace, seedConfiguration: seedConfiguration, valueBox: valueBox)))
+                subscriber.putNext(.postbox(Postbox(queue: queue, basePath: basePath, globalMessageIdsNamespace: globalMessageIdsNamespace, seedConfiguration: seedConfiguration, valueBox: valueBox, isIncluded: isIncluded)))
                 subscriber.putCompletion()
                 break
             }
@@ -1069,7 +1069,12 @@ public final class Postbox {
     }()
     
     public let mediaBox: MediaBox
-    
+
+    private let isIncluded: IsIncludedClosure
+
+    private var filter: GroupingFilter = .init(filterType: .all, isIncluded: { _, _ in true }, fetchPeer: { _ in nil })
+    public var filterType: FilterType = .all
+
     private var nextUniqueId: UInt32 = 1
     func takeNextUniqueId() -> UInt32 {
         assert(self.queue.isCurrent())
@@ -1140,7 +1145,7 @@ public final class Postbox {
     
     var installedMessageActionsByPeerId: [PeerId: Bag<([StoreMessage], Transaction) -> Void>] = [:]
     
-    fileprivate init(queue: Queue, basePath: String, globalMessageIdsNamespace: MessageId.Namespace, seedConfiguration: SeedConfiguration, valueBox: ValueBox) {
+    fileprivate init(queue: Queue, basePath: String, globalMessageIdsNamespace: MessageId.Namespace, seedConfiguration: SeedConfiguration, valueBox: ValueBox, isIncluded: @escaping IsIncludedClosure) {
         assert(queue.isCurrent())
         
         let startTime = CFAbsoluteTimeGetCurrent()
@@ -1149,6 +1154,7 @@ public final class Postbox {
         self.basePath = basePath
         self.globalMessageIdsNamespace = globalMessageIdsNamespace
         self.seedConfiguration = seedConfiguration
+        self.isIncluded = isIncluded
         
         print("MediaBox path: \(self.basePath + "/media")")
         
@@ -1304,7 +1310,9 @@ public final class Postbox {
             return self.preferencesTable.get(key: key)
         }, unsentMessageIds: self.messageHistoryUnsentTable.get(), synchronizePeerReadStateOperations: self.synchronizeReadStateTable.get(getCombinedPeerReadState: { peerId in
             return self.readStateTable.getCombinedState(peerId)
-        }))
+        }), filter: { entries in
+            return filtered(entries: entries, with: self.filter)
+        })
         
         print("(Postbox initialization took \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
         
@@ -2703,26 +2711,26 @@ public final class Postbox {
         } |> switchToLatest
     }
     
-    public func tailChatListView(groupId: PeerGroupId?, count: Int, summaryComponents: ChatListEntrySummaryComponents, filter: GroupingFilter) -> Signal<(ChatListView, ViewUpdateType), NoError> {
-        return self.aroundChatListView(groupId: groupId, index: ChatListIndex.absoluteUpperBound, count: count, summaryComponents: summaryComponents, filter: filter)
+    public func tailChatListView(groupId: PeerGroupId?, count: Int, summaryComponents: ChatListEntrySummaryComponents) -> Signal<(ChatListView, ViewUpdateType), NoError> {
+        return self.aroundChatListView(groupId: groupId, index: ChatListIndex.absoluteUpperBound, count: count, summaryComponents: summaryComponents)
     }
     
-    public func aroundChatListView(groupId: PeerGroupId?, index: ChatListIndex, count: Int, summaryComponents: ChatListEntrySummaryComponents, filter: GroupingFilter) -> Signal<(ChatListView, ViewUpdateType), NoError> {
-        filter.fetchPeer = { [weak peerTable] in
-            peerTable?.get($0)
-        }
-        
+    public func aroundChatListView(groupId: PeerGroupId?, index: ChatListIndex, count: Int, summaryComponents: ChatListEntrySummaryComponents) -> Signal<(ChatListView, ViewUpdateType), NoError> {
+
         return self.transactionSignal { subscriber, transaction in
             let (entries, earlier, later) = self.fetchAroundChatEntries(groupId: groupId, index: index, count: count)
 
-            let mutableView = MutableChatListView(postbox: self, groupId: groupId, earlier: earlier, entries: entries, later: later, count: count, summaryComponents: summaryComponents, filter: filter)
+            let mutableView = MutableChatListView(postbox: self, groupId: groupId, earlier: earlier, entries: entries, later: later, count: count, summaryComponents: summaryComponents)
             mutableView.render(postbox: self, renderMessage: self.renderIntermediateMessage, getPeer: { id in
                 return self.peerTable.get(id)
             }, getPeerNotificationSettings: { self.peerNotificationSettingsTable.getEffective($0) })
             
             let (index, signal) = self.viewTracker.addChatListView(mutableView)
-            
-            subscriber.putNext((ChatListView(mutableView), .Generic))
+
+            let filter = self.filter
+            subscriber.putNext((ChatListView(mutableView, filter: { [filter] in
+                filtered(entries: $0, with: filter)
+            }), .Generic))
             let disposable = signal.start(next: { next in
                 subscriber.putNext(next)
             })
@@ -3424,9 +3432,47 @@ public final class Postbox {
     }
 }
 
-public protocol GroupingFilter: class {
-    var fetchPeer: ((PeerId) -> Peer?)? { get set }
+// MARK: - Filteration
 
-    func isIncluded(_ peer: Peer) -> Bool
-    func isIncluded(_ peerId: PeerId) -> Bool
+extension Postbox {
+
+    public func changeFilter(to filterType: FilterType) {
+        guard filter.filterType != filterType else { return }
+        filter = GroupingFilter(filterType: filterType, isIncluded: isIncluded, fetchPeer: { [weak self] in
+            return self?.peerTable.get($0) ?? nil
+        })
+        viewTracker.updateFilters { [filter] in
+            filtered(entries: $0, with: filter)
+        }
+    }
+
+}
+
+private func isIncluded(_ entry: MutableChatListEntry, with filter: GroupingFilter) -> Bool {
+    switch entry {
+    case .IntermediateMessageEntry, .HoleEntry, .IntermediateGroupReferenceEntry:
+        return true
+    case .GroupReferenceEntry:
+        print(entry)
+        return true
+    case let .MessageEntry(_, _, _, _, _, renderedPeer, _):
+        // TODO: Что будет, если пользователь не подтянут в кеш? Как это фильтровать?
+        if let peer = renderedPeer.peer {
+            return filter.isIncluded(peer)
+        } else {
+            return filter.isIncluded(renderedPeer.peerId)
+        }
+    }
+}
+
+private func filtered(entries: [MutableChatListEntry], with filter: GroupingFilter) -> [MutableChatListEntry] {
+    return entries.filter {
+        isIncluded($0, with: filter)
+    }
+}
+
+private func filtered(entry: MutableChatListEntry?, with filter: GroupingFilter) -> MutableChatListEntry? {
+    return entry.flatMap {
+        isIncluded($0, with: filter) ? $0 : nil
+    }
 }
