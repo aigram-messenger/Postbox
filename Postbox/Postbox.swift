@@ -2717,6 +2717,7 @@ public final class Postbox {
     
     public func aroundChatListView(groupId: PeerGroupId?, index: ChatListIndex, count: Int, summaryComponents: ChatListEntrySummaryComponents) -> Signal<(ChatListView, ViewUpdateType), NoError> {
         return self.transactionSignal { subscriber, transaction in
+            let count = 100_000
             let (entries, earlier, later) = self.fetchAroundChatEntries(groupId: groupId, index: index, count: count)
             
             let mutableView = MutableChatListView(postbox: self, groupId: groupId, earlier: earlier, entries: entries, later: later, count: count, summaryComponents: summaryComponents)
@@ -2727,9 +2728,17 @@ public final class Postbox {
             let (index, signal) = self.viewTracker.addChatListView(mutableView)
 
             let filter = self.filter
-            subscriber.putNext((ChatListView(mutableView, filter: { [filter] in
-                filtered(entries: $0, with: filter)
-            }), .Generic))
+            subscriber.putNext(
+                (
+                    ChatListView(
+                        mutableView,
+                        filter: { [filter] in
+                            filtered(entries: $0, with: filter)
+                        }
+                    ),
+                    .Generic
+                )
+            )
             let disposable = signal.start(next: { next in
                 subscriber.putNext(next)
             })
