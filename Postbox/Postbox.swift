@@ -1070,10 +1070,20 @@ public final class Postbox {
     
     public let mediaBox: MediaBox
 
+    // MARK: - Filtration
+
     private let isIncluded: IsIncludedClosure
 
     private var filter: GroupingFilter = .init(filterType: .all, isIncluded: { _, _ in true }, fetchPeer: { _ in nil })
     public var filterType: FilterType = .all
+
+    // MARK: -
+
+    // MARK: - Unread categories
+
+    private var unreadCategoriesCallback: ([FilterType]) -> Void = { _ in }
+
+    // MARK: -
 
     private var nextUniqueId: UInt32 = 1
     func takeNextUniqueId() -> UInt32 {
@@ -2721,6 +2731,8 @@ public final class Postbox {
             let (entries, earlier, later) = self.fetchAroundChatEntries(groupId: groupId, index: index, count: count)
             
             let mutableView = MutableChatListView(postbox: self, groupId: groupId, earlier: earlier, entries: entries, later: later, count: count, summaryComponents: summaryComponents)
+            mutableView.unreadCategoriesCallback = self.unreadCategoriesCallback
+            mutableView.isIncluded = self.isIncluded
             mutableView.render(postbox: self, renderMessage: self.renderIntermediateMessage, getPeer: { id in
                 return self.peerTable.get(id)
             }, getPeerNotificationSettings: { self.peerNotificationSettingsTable.getEffective($0) })
@@ -3483,4 +3495,14 @@ private func filtered(entry: MutableChatListEntry?, with filter: GroupingFilter)
     return entry.flatMap {
         isIncluded($0, with: filter) ? $0 : nil
     }
+}
+
+// MARK: - Getting unread categories
+
+extension Postbox {
+
+    public func setUnreadCatigoriesCallback(_ unreadCategoriesCallback: @escaping ([FilterType]) -> Void) {
+        self.unreadCategoriesCallback = unreadCategoriesCallback
+    }
+
 }

@@ -291,8 +291,15 @@ final class MutableChatListView {
     fileprivate var additionalItemEntries: [MutableChatListEntry]
     fileprivate var earlier: MutableChatListEntry?
     fileprivate var later: MutableChatListEntry?
-    fileprivate var entries: [MutableChatListEntry]
+    fileprivate var entries: [MutableChatListEntry] {
+        didSet {
+            unreadCategoriesCallback(getUnreadCategories(from: entries, isIncluded: isIncluded))
+        }
+    }
     private var count: Int
+
+    var unreadCategoriesCallback: ([FilterType]) -> Void = { _ in }
+    var isIncluded: IsIncludedClosure = { _, _ in true }
     
     init(postbox: Postbox, groupId: PeerGroupId?, earlier: MutableChatListEntry?, entries: [MutableChatListEntry], later: MutableChatListEntry?, count: Int, summaryComponents: ChatListEntrySummaryComponents) {
         self.groupId = groupId
@@ -827,3 +834,37 @@ public final class ChatListView {
         self.additionalItemEntries = additionalItemEntries
     }
 }
+
+// MARK: - Getting unread categories
+
+private func getUnreadCategories(from entries: [MutableChatListEntry], isIncluded: IsIncludedClosure) -> [FilterType] {
+    var unreadCategories: Set<FilterType> = []
+    for entry in entries {
+        switch entry {
+        case let .MessageEntry(_, _, readState, _, _, renderedPeer, _):
+            guard
+                let peer = renderedPeer.peer,
+                (readState?.isUnread ?? false) || (readState?.markedUnread ?? false)
+            else { break }
+
+            if isIncluded(peer, .privateChats) {
+                unreadCategories.insert(.privateChats)
+            } else if isIncluded(peer, .groups) {
+                unreadCategories.insert(.groups)
+            } else if isIncluded(peer, .channels) {
+                unreadCategories.insert(.channels)
+            } else if isIncluded(peer, .bots) {
+                unreadCategories.insert(.bots)
+            }
+        default:
+            break
+        }
+    }
+
+    if !unreadCategories.isEmpty {
+        unreadCategories.insert(.all)
+    }
+
+    return unreadCategories.map { $0 }
+}
+
