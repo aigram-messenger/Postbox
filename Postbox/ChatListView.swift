@@ -291,8 +291,15 @@ final class MutableChatListView {
     fileprivate var additionalItemEntries: [MutableChatListEntry]
     fileprivate var earlier: MutableChatListEntry?
     fileprivate var later: MutableChatListEntry?
-    fileprivate var entries: [MutableChatListEntry]
+    fileprivate var entries: [MutableChatListEntry] {
+        didSet {
+            unreadCategoriesCallback(getUnreadCategories(from: entries, isIncluded: isIncluded))
+        }
+    }
     private var count: Int
+
+    var unreadCategoriesCallback: ([FilterType]) -> Void = { _ in }
+    var isIncluded: IsIncludedClosure = { _, _ in true }
     
     init(postbox: Postbox, groupId: PeerGroupId?, earlier: MutableChatListEntry?, entries: [MutableChatListEntry], later: MutableChatListEntry?, count: Int, summaryComponents: ChatListEntrySummaryComponents) {
         self.groupId = groupId
@@ -320,9 +327,8 @@ final class MutableChatListView {
         if !self.entries.isEmpty && self.later != nil {
             index = self.entries[self.entries.count / 2].index
         }
-        
         let (entries, earlier, later) = postbox.fetchAroundChatEntries(groupId: self.groupId, index: index, count: self.entries.count)
-        
+
         if entries != self.entries || earlier != self.earlier || later != self.later {
             self.entries = entries
             self.earlier = earlier
@@ -786,11 +792,11 @@ public final class ChatListView {
     public let earlierIndex: ChatListIndex?
     public let laterIndex: ChatListIndex?
     
-    init(_ mutableView: MutableChatListView) {
+    init(_ mutableView: MutableChatListView, filter: ([MutableChatListEntry]) -> [MutableChatListEntry]) {
         self.groupId = mutableView.groupId
         
         var entries: [ChatListEntry] = []
-        for entry in mutableView.entries {
+        for entry in filter(mutableView.entries) {
             switch entry {
                 case let .MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, summaryInfo):
                     entries.append(.MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, summaryInfo))
@@ -805,11 +811,12 @@ public final class ChatListView {
             }
         }
         self.entries = entries
+        // TODO: Нужно ли фильтровать и их? А если нужно, то как?
         self.earlierIndex = mutableView.earlier?.index
         self.laterIndex = mutableView.later?.index
-        
+
         var additionalItemEntries: [ChatListEntry] = []
-        for entry in mutableView.additionalItemEntries {
+        for entry in filter(mutableView.additionalItemEntries) {
             switch entry {
                 case let .MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, summaryInfo):
                     additionalItemEntries.append(.MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, summaryInfo))
@@ -827,3 +834,37 @@ public final class ChatListView {
         self.additionalItemEntries = additionalItemEntries
     }
 }
+
+// MARK: - Getting unread categories
+
+private func getUnreadCategories(from entries: [MutableChatListEntry], isIncluded: IsIncludedClosure) -> [FilterType] {
+    var unreadCategories: Set<FilterType> = []
+    for entry in entries {
+        switch entry {
+        case let .MessageEntry(_, _, readState, _, _, renderedPeer, _):
+            guard
+                let peer = renderedPeer.peer,
+                (readState?.isUnread ?? false) || (readState?.markedUnread ?? false)
+            else { break }
+
+            if isIncluded(peer, .privateChats) {
+                unreadCategories.insert(.privateChats)
+            } else if isIncluded(peer, .groups) {
+                unreadCategories.insert(.groups)
+            } else if isIncluded(peer, .channels) {
+                unreadCategories.insert(.channels)
+            } else if isIncluded(peer, .bots) {
+                unreadCategories.insert(.bots)
+            }
+        default:
+            break
+        }
+    }
+
+    if !unreadCategories.isEmpty {
+        unreadCategories.insert(.all)
+    }
+
+    return unreadCategories.map { $0 }
+}
+
