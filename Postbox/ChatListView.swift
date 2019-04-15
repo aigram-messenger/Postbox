@@ -805,9 +805,11 @@ public final class ChatListView {
                 case let .GroupReferenceEntry(groupId, index, message, topPeers, counters):
                     entries.append(.GroupReferenceEntry(groupId, index, message, topPeers.getPeers(), GroupReferenceUnreadCounters(counters)))
                 case .IntermediateMessageEntry:
-                    assertionFailure()
+//                    assertionFailure()
+                    break
                 case .IntermediateGroupReferenceEntry:
-                    assertionFailure()
+//                    assertionFailure()
+                    break
             }
         }
         self.entries = entries
