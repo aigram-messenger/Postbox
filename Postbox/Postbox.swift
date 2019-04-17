@@ -1075,9 +1075,6 @@ public final class Postbox {
     private let isIncluded: IsIncludedClosure
 
     private var filter: GroupingFilter = .init(filterType: .all, isIncluded: { _, _ in true }, fetchPeer: { _ in nil })
-    public var filterType: FilterType = .all
-
-    // MARK: -
 
     // MARK: - Unread categories
 
@@ -1320,9 +1317,7 @@ public final class Postbox {
             return self.preferencesTable.get(key: key)
         }, unsentMessageIds: self.messageHistoryUnsentTable.get(), synchronizePeerReadStateOperations: self.synchronizeReadStateTable.get(getCombinedPeerReadState: { peerId in
             return self.readStateTable.getCombinedState(peerId)
-        }), filter: { entries in
-            return filtered(entries: entries, with: self.filter)
-        })
+        }), filter: filter)
         
         print("(Postbox initialization took \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
         
@@ -2744,9 +2739,7 @@ public final class Postbox {
                 (
                     ChatListView(
                         mutableView,
-                        filter: { [filter] in
-                            filtered(entries: $0, with: filter)
-                        }
+                        filter: filter
                     ),
                     .Generic
                 )
@@ -3461,40 +3454,9 @@ extension Postbox {
         filter = GroupingFilter(filterType: filterType, isIncluded: isIncluded, fetchPeer: { [weak self] in
             return self?.peerTable.get($0) ?? nil
         })
-        viewTracker.updateFilters { [filter] in
-            filtered(entries: $0, with: filter)
-        }
+        viewTracker.update(filter: filter)
     }
 
-}
-
-private func isIncluded(_ entry: MutableChatListEntry, with filter: GroupingFilter) -> Bool {
-    switch entry {
-    case .IntermediateMessageEntry, .HoleEntry, .IntermediateGroupReferenceEntry:
-        return true
-    case .GroupReferenceEntry:
-        print(entry)
-        return true
-    case let .MessageEntry(_, _, _, _, _, renderedPeer, _):
-        // TODO: Что будет, если пользователь не подтянут в кеш? Как это фильтровать?
-        if let peer = renderedPeer.peer {
-            return filter.isIncluded(peer)
-        } else {
-            return filter.isIncluded(renderedPeer.peerId)
-        }
-    }
-}
-
-private func filtered(entries: [MutableChatListEntry], with filter: GroupingFilter) -> [MutableChatListEntry] {
-    return entries.filter {
-        isIncluded($0, with: filter)
-    }
-}
-
-private func filtered(entry: MutableChatListEntry?, with filter: GroupingFilter) -> MutableChatListEntry? {
-    return entry.flatMap {
-        isIncluded($0, with: filter) ? $0 : nil
-    }
 }
 
 // MARK: - Getting unread categories

@@ -13,6 +13,7 @@ public enum FilterType {
     case channels
     case bots
     case all
+    case folders
 }
 
 public typealias IsIncludedClosure = (Peer, FilterType) -> Bool
@@ -24,6 +25,8 @@ struct GroupingFilter {
     private let fetchPeer: PeerFetchingClosure
     private let isIncluded: IsIncludedClosure
 
+    static let empty: GroupingFilter = .init(filterType: .all, isIncluded: { _, _ in true }, fetchPeer: { _ in nil })
+
     let filterType: FilterType
 
     init(filterType: FilterType, isIncluded: @escaping IsIncludedClosure, fetchPeer: @escaping PeerFetchingClosure) {
@@ -32,14 +35,35 @@ struct GroupingFilter {
         self.fetchPeer = fetchPeer
     }
 
-    func isIncluded(_ peer: Peer) -> Bool {
-        return isIncluded(peer, filterType)
+    func filter(entries: [MutableChatListEntry]) -> [MutableChatListEntry] {
+        return entries.filter {
+            isIncluded($0)
+        }
     }
 
-    func isIncluded(_ peerId: PeerId) -> Bool {
-        return fetchPeer(peerId).map {
-            isIncluded($0)
-        } ?? false
+    func filter(entry: MutableChatListEntry?) -> MutableChatListEntry? {
+        return entry.flatMap {
+            isIncluded($0) ? $0 : nil
+        }
+    }
+
+    private func isIncluded(_ entry: MutableChatListEntry) -> Bool {
+        switch entry {
+        case .IntermediateMessageEntry, .HoleEntry, .IntermediateGroupReferenceEntry:
+            return true
+        case .GroupReferenceEntry:
+            print(entry)
+            return true
+        case let .MessageEntry(_, _, _, _, _, renderedPeer, _):
+            // TODO: Что будет, если пользователь не подтянут в кеш? Как это фильтровать?
+            if let peer = renderedPeer.peer {
+                return isIncluded(peer, filterType)
+            } else {
+                return fetchPeer(renderedPeer.peerId).map {
+                    isIncluded($0, filterType)
+                } ?? false
+            }
+        }
     }
 
 }

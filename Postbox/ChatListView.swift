@@ -792,11 +792,11 @@ public final class ChatListView {
     public let earlierIndex: ChatListIndex?
     public let laterIndex: ChatListIndex?
     
-    init(_ mutableView: MutableChatListView, filter: ([MutableChatListEntry]) -> [MutableChatListEntry]) {
+    init(_ mutableView: MutableChatListView, filter: GroupingFilter) {
         self.groupId = mutableView.groupId
         
         var entries: [ChatListEntry] = []
-        for entry in filter(mutableView.entries) {
+        for entry in filter.filter(entries: mutableView.entries) {
             switch entry {
                 case let .MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, summaryInfo):
                     entries.append(.MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, summaryInfo))
@@ -818,7 +818,7 @@ public final class ChatListView {
         self.laterIndex = mutableView.later?.index
 
         var additionalItemEntries: [ChatListEntry] = []
-        for entry in filter(mutableView.additionalItemEntries) {
+        for entry in filter.filter(entries: mutableView.additionalItemEntries) {
             switch entry {
                 case let .MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, summaryInfo):
                     additionalItemEntries.append(.MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, summaryInfo))
