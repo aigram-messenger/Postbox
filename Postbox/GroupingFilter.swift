@@ -6,6 +6,20 @@
 //  Copyright © 2019 Telegram. All rights reserved.
 //
 
+// FIXME: Move to TelegramUI.
+public enum ChatListMode {
+    case standard
+    case filter(type: FilterType)
+    case folders
+}
+
+// FIXME: Rename to something more appropriate.
+enum InternalChatListMode {
+    case standard
+    case filter(GroupingFilter)
+    case folders([Folder])
+}
+
 public enum FilterType {
     case privateChats
     case unread
@@ -13,7 +27,29 @@ public enum FilterType {
     case channels
     case bots
     case all
-    case folders
+    case custom(Set<PeerId>)
+}
+
+// FIXME: Temp. Remove.
+extension FilterType: Hashable {
+    public var hashValue: Int {
+        switch self {
+        case .privateChats:
+            return 0.hashValue
+        case .unread:
+            return 1.hashValue
+        case .groups:
+            return 2.hashValue
+        case .channels:
+            return 3.hashValue
+        case .bots:
+            return 4.hashValue
+        case .all:
+            return 5.hashValue
+        case .custom:
+            return 6.hashValue
+        }
+    }
 }
 
 public typealias IsIncludedClosure = (Peer, FilterType) -> Bool

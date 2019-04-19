@@ -1,4 +1,5 @@
 import Foundation
+import CoreData
 
 #if os(macOS)
     import SwiftSignalKitMac
@@ -1070,11 +1071,16 @@ public final class Postbox {
     
     public let mediaBox: MediaBox
 
+    // MARK: - Folders
+
+    private let folderManager: FolderManager
+
     // MARK: - Filtration
 
     private let isIncluded: IsIncludedClosure
 
-    private var filter: GroupingFilter = .init(filterType: .all, isIncluded: { _, _ in true }, fetchPeer: { _ in nil })
+    private var chatListMode: InternalChatListMode = .standard
+//    private var filter: GroupingFilter = .init(filterType: .all, isIncluded: { _, _ in true }, fetchPeer: { _ in nil })
 
     // MARK: - Unread categories
 
@@ -1294,6 +1300,9 @@ public final class Postbox {
         self.tables = tables
         
         self.transactionStateVersion = self.metadataTable.transactionStateVersion()
+
+        let folderStorage = FolderStorage(context: NSManagedObjectContext(concurrencyType: .privateQueueConcurrencyType))
+        folderManager = .init(folderStorage: folderStorage)
         
         self.viewTracker = ViewTracker(queue: self.queue, fetchAnchorIndex: self.fetchAnchorIndex, renderMessage: self.renderIntermediateMessage, getPeer: { peerId in
             return self.peerTable.get(peerId)
@@ -1317,7 +1326,7 @@ public final class Postbox {
             return self.preferencesTable.get(key: key)
         }, unsentMessageIds: self.messageHistoryUnsentTable.get(), synchronizePeerReadStateOperations: self.synchronizeReadStateTable.get(getCombinedPeerReadState: { peerId in
             return self.readStateTable.getCombinedState(peerId)
-        }), filter: filter)
+        }), chatListHandler: chatListHandler)
         
         print("(Postbox initialization took \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
         
@@ -2734,12 +2743,11 @@ public final class Postbox {
             
             let (index, signal) = self.viewTracker.addChatListView(mutableView)
 
-            let filter = self.filter
             subscriber.putNext(
                 (
                     ChatListView(
                         mutableView,
-                        filter: filter
+                        chatListHandler: self.chatListHandler
                     ),
                     .Generic
                 )
@@ -3443,18 +3451,62 @@ public final class Postbox {
             }
         }).start()
     }
+
+
+//    private var chatListMode: InternalChatListMode = .standard
+
+    private lazy var chatListHandler: ChatListHandler = { [weak self] in
+        let mode = self?.chatListMode ?? .standard
+
+        switch mode {
+            case .standard:
+                return $0
+            case let .filter(filter):
+                return filter.filter(entries: $0)
+            case let .folders(folders):
+                // TODO: Implement.
+                return $0
+        }
+    }
+
 }
 
 // MARK: - Filteration
 
+typealias ChatListHandler = ([MutableChatListEntry]) -> [MutableChatListEntry]
+
 extension Postbox {
 
-    public func changeFilter(to filterType: FilterType) {
-        guard filter.filterType != filterType else { return }
-        filter = GroupingFilter(filterType: filterType, isIncluded: isIncluded, fetchPeer: { [weak self] in
-            return self?.peerTable.get($0) ?? nil
-        })
-        viewTracker.update(filter: filter)
+    public func change(chatListMode: ChatListMode) {
+        set(chatListMode: chatListMode)
+        viewTracker.chatListModeDidUpdate()
+    }
+
+//    public func changeFilter(to filterType: FilterType) {
+//        guard filter.filterType != filterType else { return }
+//        filter = GroupingFilter(filterType: filterType, isIncluded: isIncluded, fetchPeer: { [weak self] in
+//            return self?.peerTable.get($0) ?? nil
+//        })
+//        viewTracker.update(filter: filter)
+//    }
+
+    private func set(chatListMode: ChatListMode) {
+        switch chatListMode {
+        case .standard:
+            self.chatListMode = .standard
+        case let .filter(type):
+            let filter = GroupingFilter(
+                filterType: type,
+                isIncluded: isIncluded,
+                fetchPeer: { [weak self] in
+                    return self?.peerTable.get($0) ?? nil
+                }
+            )
+            self.chatListMode = .filter(filter)
+        case .folders:
+            // TODO: Implement
+            break
+        }
     }
 
 }
