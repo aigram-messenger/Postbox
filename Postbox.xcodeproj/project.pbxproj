@@ -7,6 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		18182A322265C92000A2FF86 /* FolderManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18182A312265C92000A2FF86 /* FolderManager.swift */; };
+		18182A342265C95800A2FF86 /* Folder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18182A332265C95800A2FF86 /* Folder.swift */; };
+		18182A362265CA5400A2FF86 /* IdGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18182A352265CA5400A2FF86 /* IdGenerator.swift */; };
+		18182A382265E05100A2FF86 /* FolderStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18182A372265E05100A2FF86 /* FolderStorage.swift */; };
+		18182A3C2265E0E800A2FF86 /* ManagedFolder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18182A3B2265E0E800A2FF86 /* ManagedFolder.swift */; };
+		18182A43226601EC00A2FF86 /* ManagedFolder.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 18182A41226601EC00A2FF86 /* ManagedFolder.xcdatamodeld */; };
+		1818E1E3226CD71A007C8F8F /* ManagedPeerId.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1818E1E2226CD71A007C8F8F /* ManagedPeerId.swift */; };
 		1863C2B022564275003D5CB2 /* GroupingFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1863C2AD22563BE3003D5CB2 /* GroupingFilter.swift */; };
 		1863C2B122564275003D5CB2 /* GroupingFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1863C2AD22563BE3003D5CB2 /* GroupingFilter.swift */; };
 		9F5B6E762011449F00C58B2A /* PostboxLogging.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ECCB8E1FE9EB5500609802 /* PostboxLogging.swift */; };
@@ -398,6 +405,13 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		18182A312265C92000A2FF86 /* FolderManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderManager.swift; sourceTree = "<group>"; };
+		18182A332265C95800A2FF86 /* Folder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Folder.swift; sourceTree = "<group>"; };
+		18182A352265CA5400A2FF86 /* IdGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdGenerator.swift; sourceTree = "<group>"; };
+		18182A372265E05100A2FF86 /* FolderStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderStorage.swift; sourceTree = "<group>"; };
+		18182A3B2265E0E800A2FF86 /* ManagedFolder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedFolder.swift; sourceTree = "<group>"; };
+		18182A42226601EC00A2FF86 /* ManagedFolder.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = ManagedFolder.xcdatamodel; sourceTree = "<group>"; };
+		1818E1E2226CD71A007C8F8F /* ManagedPeerId.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedPeerId.swift; sourceTree = "<group>"; };
 		1863C2AD22563BE3003D5CB2 /* GroupingFilter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupingFilter.swift; sourceTree = "<group>"; };
 		D001388520BD942B007C9721 /* PostboxUpgrade_16to17.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostboxUpgrade_16to17.swift; sourceTree = "<group>"; };
 		D003E4E51B38DBDB00C22CBC /* MessageHistoryView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryView.swift; sourceTree = "<group>"; };
@@ -630,6 +644,28 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		18182A302265C8DD00A2FF86 /* FolderManager */ = {
+			isa = PBXGroup;
+			children = (
+				18182A3A2265E0D700A2FF86 /* Models */,
+				18182A312265C92000A2FF86 /* FolderManager.swift */,
+				18182A352265CA5400A2FF86 /* IdGenerator.swift */,
+				18182A372265E05100A2FF86 /* FolderStorage.swift */,
+			);
+			name = FolderManager;
+			sourceTree = "<group>";
+		};
+		18182A3A2265E0D700A2FF86 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				18182A332265C95800A2FF86 /* Folder.swift */,
+				18182A3B2265E0E800A2FF86 /* ManagedFolder.swift */,
+				18182A41226601EC00A2FF86 /* ManagedFolder.xcdatamodeld */,
+				1818E1E2226CD71A007C8F8F /* ManagedPeerId.swift */,
+			);
+			name = Models;
+			sourceTree = "<group>";
+		};
 		D0105D69218362D9007C04A7 /* Temp Box */ = {
 			isa = PBXGroup;
 			children = (
@@ -929,6 +965,7 @@
 		D0E3A74C1B28A7E300A402D9 /* Postbox */ = {
 			isa = PBXGroup;
 			children = (
+				18182A302265C8DD00A2FF86 /* FolderManager */,
 				D0DA443F1E4C7834005FDCA7 /* Upgrade */,
 				D075163D1B2D9CEF00AE42E0 /* PostboxPrivate */,
 				D07515FC1B2C44A200AE42E0 /* thirdparty */,
@@ -1357,6 +1394,7 @@
 				D0DF0C8F1D81A350008AEB01 /* PeerView.swift in Sources */,
 				D0B2F75D204F551D00D3BFB9 /* DeviceContactImportInfoTable.swift in Sources */,
 				D0079F651D5A457A00A27A2C /* ContactPeersView.swift in Sources */,
+				18182A322265C92000A2FF86 /* FolderManager.swift in Sources */,
 				D08CEFB41D2AD8BE0015D3BC /* RedBlackTree.swift in Sources */,
 				D0F82D0C1E439FCC007E499C /* OrderedItemListEntry.swift in Sources */,
 				D03120FE1DA562E9006A2A60 /* CachedPeerDataTable.swift in Sources */,
@@ -1369,12 +1407,14 @@
 				D08C713A1C501F0700779C0F /* MessageHistoryHole.swift in Sources */,
 				D044CA2A1C617D39002160FF /* SeedConfiguration.swift in Sources */,
 				D07CFF811DCA765D00761F81 /* PeerChatInterfaceState.swift in Sources */,
+				18182A362265CA5400A2FF86 /* IdGenerator.swift in Sources */,
 				D05D8B34218F1EBB0064586F /* AccountManagerSharedDataTable.swift in Sources */,
 				D00C7CE31E37861C0080C3D5 /* MessageView.swift in Sources */,
 				D0ECCB8F1FE9EB5500609802 /* PostboxLogging.swift in Sources */,
 				D01F7D9D1CBF8586008765C9 /* SynchronizePeerReadStatesView.swift in Sources */,
 				D0A352F81F549D95001423DC /* InvalidatedMessageHistoryTagSummariesView.swift in Sources */,
 				D0F53BF31E794C6700117362 /* PeerChatStateView.swift in Sources */,
+				18182A43226601EC00A2FF86 /* ManagedFolder.xcdatamodeld in Sources */,
 				D029AA522167BC22006D4947 /* OrderedContactsView.swift in Sources */,
 				D021E0D81DB4FD1300C6B04F /* ItemCollectionItemTable.swift in Sources */,
 				D048B4A820A5CBE400C79D31 /* AdditionalChatListItemsTable.swift in Sources */,
@@ -1397,6 +1437,7 @@
 				D0AAD1B51E32673C00D5B9DE /* TimestampBasedMessageAttributesView.swift in Sources */,
 				D010B61A1E1E463900C3E282 /* PeerMergedOperationLogIndexTable.swift in Sources */,
 				D0F9E8671C58D08900037222 /* ChatListIndexTable.swift in Sources */,
+				18182A342265C95800A2FF86 /* Folder.swift in Sources */,
 				D079FCE61F06A3170038FADE /* NoticeTable.swift in Sources */,
 				D0E3A7A21B28B7DC00A402D9 /* Media.swift in Sources */,
 				D0E3A7881B28AE9C00A402D9 /* Coding.swift in Sources */,
@@ -1432,6 +1473,7 @@
 				D03120FA1DA540F0006A2A60 /* CachedPeerData.swift in Sources */,
 				D07516791B2EC90400AE42E0 /* SQLite-Bridging.m in Sources */,
 				D0977FA01B8244D7009994B2 /* SqliteValueBox.swift in Sources */,
+				1818E1E3226CD71A007C8F8F /* ManagedPeerId.swift in Sources */,
 				D07047AB1F3DD8D100F6A8D4 /* PendingMessageActionsView.swift in Sources */,
 				D07047A01F3CE16500F6A8D4 /* MessageHistoryTagsSummaryTable.swift in Sources */,
 				D0C26D6F1FE2E737004ABF18 /* GroupFeedReadState.swift in Sources */,
@@ -1445,6 +1487,7 @@
 				D0C26D7E1FE3FA4E004ABF18 /* PinnedItemId.swift in Sources */,
 				D0CFBB8E1FD7620500B65C0D /* PeerGroupAssociationTable.swift in Sources */,
 				D0BEAF701E54BC1E00BD963D /* AccountRecordsView.swift in Sources */,
+				18182A382265E05100A2FF86 /* FolderStorage.swift in Sources */,
 				D07CFF851DCA99C400761F81 /* InitialMessageHistoryData.swift in Sources */,
 				D0C26D781FE31CA4004ABF18 /* GroupFeedReadStateSyncOperationsView.swift in Sources */,
 				D0A352F51F5488E9001423DC /* InvalidatedMessageHistoryTagsSummaryTable.swift in Sources */,
@@ -1487,6 +1530,7 @@
 				D04614302004E24600EC0EF2 /* LocalMessageHistoryTagsTable.swift in Sources */,
 				D00EED1E1C81F28D00341DFF /* MessageHistoryTagsTable.swift in Sources */,
 				D044CA2C1C617E2D002160FF /* MessageHistoryMetadataTable.swift in Sources */,
+				18182A3C2265E0E800A2FF86 /* ManagedFolder.swift in Sources */,
 				D0105D6B218362F2007C04A7 /* TempBox.swift in Sources */,
 				D0FC194A201E8EAF00FEDBB2 /* MediaBoxFile.swift in Sources */,
 				D03120FC1DA55427006A2A60 /* PeerNotificationSettings.swift in Sources */,
@@ -1600,7 +1644,7 @@
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
 				INFOPLIST_FILE = Postbox/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				OTHER_CFLAGS = (
 					"-DSQLITE_HAS_CODEC=1",
@@ -1741,7 +1785,7 @@
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
 				INFOPLIST_FILE = Postbox/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				OTHER_CFLAGS = (
 					"-DSQLITE_HAS_CODEC=1",
@@ -1889,7 +1933,7 @@
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
 				INFOPLIST_FILE = Postbox/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				OTHER_CFLAGS = (
 					"-DSQLITE_HAS_CODEC=1",
@@ -2029,7 +2073,7 @@
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
 				INFOPLIST_FILE = Postbox/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				OTHER_CFLAGS = (
 					"-DSQLITE_HAS_CODEC=1",
@@ -2124,7 +2168,7 @@
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
 				INFOPLIST_FILE = Postbox/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				OTHER_CFLAGS = (
 					"-DSQLITE_HAS_CODEC=1",
@@ -2265,7 +2309,7 @@
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
 				INFOPLIST_FILE = Postbox/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				OTHER_CFLAGS = (
 					"-DSQLITE_HAS_CODEC=1",
@@ -2480,7 +2524,7 @@
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
 				INFOPLIST_FILE = Postbox/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				OTHER_CFLAGS = (
 					"-DSQLITE_HAS_CODEC=1",
@@ -2619,7 +2663,7 @@
 				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
 				INFOPLIST_FILE = Postbox/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				OTHER_CFLAGS = (
 					"-DSQLITE_HAS_CODEC=1",
@@ -2725,6 +2769,19 @@
 			defaultConfigurationName = "Debug Hockeyapp";
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCVersionGroup section */
+		18182A41226601EC00A2FF86 /* ManagedFolder.xcdatamodeld */ = {
+			isa = XCVersionGroup;
+			children = (
+				18182A42226601EC00A2FF86 /* ManagedFolder.xcdatamodel */,
+			);
+			currentVersion = 18182A42226601EC00A2FF86 /* ManagedFolder.xcdatamodel */;
+			path = ManagedFolder.xcdatamodeld;
+			sourceTree = "<group>";
+			versionGroupType = wrapper.xcdatamodel;
+		};
+/* End XCVersionGroup section */
 	};
 	rootObject = D0E3A7411B28A7E300A402D9 /* Project object */;
 }

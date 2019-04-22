@@ -1073,7 +1073,7 @@ public final class Postbox {
 
     // MARK: - Folders
 
-    private let folderManager: FolderManager
+    private let folderManager: FolderManager = .shared
 
     // MARK: - Filtration
 
@@ -1300,9 +1300,6 @@ public final class Postbox {
         self.tables = tables
         
         self.transactionStateVersion = self.metadataTable.transactionStateVersion()
-
-        let folderStorage = FolderStorage(context: NSManagedObjectContext(concurrencyType: .privateQueueConcurrencyType))
-        folderManager = .init(folderStorage: folderStorage)
         
         self.viewTracker = ViewTracker(queue: self.queue, fetchAnchorIndex: self.fetchAnchorIndex, renderMessage: self.renderIntermediateMessage, getPeer: { peerId in
             return self.peerTable.get(peerId)
@@ -3452,8 +3449,7 @@ public final class Postbox {
         }).start()
     }
 
-
-//    private var chatListMode: InternalChatListMode = .standard
+    // MARK: - Chat list mode
 
     private lazy var chatListHandler: ChatListHandler = { [weak self] in
         let mode = self?.chatListMode ?? .standard
@@ -3517,6 +3513,16 @@ extension Postbox {
 
     public func setUnreadCatigoriesCallback(_ unreadCategoriesCallback: @escaping ([FilterType]) -> Void) {
         self.unreadCategoriesCallback = unreadCategoriesCallback
+    }
+
+}
+
+// MARK: - Folders
+
+public extension Postbox {
+
+    public func createFolder(with name: String, peers: [PeerId]) {
+        folderManager.createFolder(with: name, peerIds: peers)
     }
 
 }
