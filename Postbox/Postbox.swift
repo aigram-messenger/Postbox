@@ -3550,15 +3550,14 @@ extension Postbox {
 
 public extension Postbox {
 
-    public func createFolder(with name: String, peers: [PeerId]) {
+    public func delete(folderWithId id: PeerId) {
+        folderManager.delete(folderWithId: -id.id)
+        viewTracker.chatListModeDidUpdate()
+    }
 
-//        tailChatListView(groupId: nil, count: 0, summaryComponents: .init())
-//            .start(next: { [weak folderManager] chatListView, update in
-//
-//            })
+    public func createFolder(with name: String, peers: [PeerId]) {
         folderManager.createFolder(with: name, peerIds: peers)
         viewTracker.chatListModeDidUpdate()
-
     }
 
     /// Initiates watching updates for the chat list in order to keep folders up to date.

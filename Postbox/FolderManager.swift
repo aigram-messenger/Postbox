@@ -69,7 +69,12 @@ final class FolderManager {
     }
 
     func delete(folderWithId id: Folder.Id) {
-        fatalError("\(#function) is not implemented.")
+        let result = folderStorage.delete(folderWithId: id)
+
+        if case let .failure(error) = result {
+            // TODO: Handle error
+            print(error)
+        }
     }
 
     func update(folder: Folder) {

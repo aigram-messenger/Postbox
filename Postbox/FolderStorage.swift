@@ -111,9 +111,12 @@ final class FolderStorage {
 
     func delete(folderWithId id: Folder.Id) -> Result<Void> {
         guard let managedObject = cachedFolders[id] else {
-            return .failure(Error.failedToSave)
+            return .failure(Error.failedToRetrieve)
         }
+
+        managedObject.removeFromStoredPeerIds(managedObject.storedPeerIds ?? NSSet())
         context.delete(managedObject)
+
         return .success(())
     }
 
@@ -153,6 +156,7 @@ extension FolderStorage {
 
     enum Error: Swift.Error {
         case failedToSave
+        case failedToRetrieve
     }
 
 }
