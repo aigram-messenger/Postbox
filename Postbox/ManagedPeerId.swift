@@ -22,3 +22,11 @@ extension ManagedPeerId {
     }
 
 }
+
+extension Sequence where Element == ManagedPeerId {
+
+    func toPlainEntities() -> [PeerId] {
+        return map { $0.toPlainEntity() }
+    }
+
+}

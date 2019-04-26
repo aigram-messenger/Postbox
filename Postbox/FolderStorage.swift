@@ -6,37 +6,25 @@
 //  Copyright © 2019 Telegram. All rights reserved.
 //
 
-//import UIKit
 import CoreData
 
 final class FolderStorage {
 
-    var folderListUpdate: (([Folder]) -> Void)?
+    var folderListUpdate: (([Folder]) -> Void)? {
+        didSet {
+            folderListUpdate?(getAllFolders())
+        }
+    }
 
     static var shared: FolderStorage = .init()
 
     private lazy var persistenceContainer: NSPersistentContainer = {
-        let modelName = "ManagedFolder"
-        guard let modelUrl = Bundle(for: type(of: self)).url(forResource: modelName, withExtension: "momd") else {
-            fatalError("Error loading model from bundle")
+        guard let container = NSPersistentContainer(type: ManagedFolder.self) else {
+            fatalError("Failed to initilise container.")
         }
-
-        guard let model = NSManagedObjectModel(contentsOf: modelUrl) else {
-            fatalError("Error initializing mom from: \(modelUrl)")
-        }
-
-
-        let container = NSPersistentContainer(name: modelName, managedObjectModel: model)
-        container.loadPersistentStores(completionHandler: { (storeDescription, error) in
+        
+        container.loadPersistentStores(completionHandler: { _, error in
             if let error = error as NSError? {
-                /*
-                 Typical reasons for an error here include:
-                 * The parent directory does not exist, cannot be created, or disallows writing.
-                 * The persistent store is not accessible, due to permissions or data protection when the device is locked.
-                 * The device is out of space.
-                 * The store could not be migrated to the current model version.
-                 Check the error message to determine what the actual problem was.
-                 */
                 fatalError("Unresolved error \(error), \(error.userInfo)")
             }
         })
@@ -47,7 +35,7 @@ final class FolderStorage {
         return persistenceContainer.viewContext
     }
 
-    private var cachedFolders: [ManagedFolder] = [] {
+    private var cachedFolders: [Int32: ManagedFolder] = [:] {
         didSet {
             folderListUpdate?(getAllFolders())
         }
@@ -56,6 +44,11 @@ final class FolderStorage {
     private init() {
         observeAppTermination()
         fetchFromDisk()
+//        cachedFolders.forEach {
+//            context.delete($1)
+//        }
+//        try? context.save()
+//        cachedFolders.removeAll()
     }
 
     deinit {
@@ -63,14 +56,19 @@ final class FolderStorage {
     }
 
     func getAllFolders() -> [Folder] {
-        return cachedFolders.map { $0.toPlainEntity() }
+        return cachedFolders.values.compactMap { $0.toPlainEntity() }
     }
 
-    func save(folder: Folder) -> Result<Void> {
-        _ = ManagedFolder(context: context, plainEntity: folder)
+    func create(folder: Folder) -> Result<Void> {
+        guard cachedFolders[folder.folderId] == nil else {
+            return .failure(NSError())
+        }
+
+        let managedFolder = ManagedFolder(context: context, plainEntity: folder)
 
         do {
             try self.context.save()
+            cachedFolders[folder.folderId] = managedFolder
             return .success(())
         } catch let error as NSError {
             print(error)
@@ -78,8 +76,41 @@ final class FolderStorage {
         }
     }
 
+    func update(folder: Folder) {
+
+    }
+
+    func update(folders: [Folder]) {
+        guard !folders.isEmpty else { return }
+
+        var cachedFolders = self.cachedFolders
+        for folder in folders {
+            guard let managedFolder = cachedFolders[folder.folderId] else {
+                assertionFailure("Folder \(folder.name)")
+                continue
+            }
+
+            let peerIdsToDelete = managedFolder.peerIds
+                .filter { !folder.peerIds.contains($0.toPlainEntity()) }
+
+            let peerIdsToInsert = folder.peerIds
+                    .lazy
+                    .filter { peerId in
+                        !managedFolder.peerIds.contains { $0.id == peerId.id && $0.namespace == peerId.namespace }
+                    }
+                    .map { ManagedPeerId(context: self.context, plainEntity: $0) }
+                    .collect()
+
+            managedFolder.name = folder.name
+            managedFolder.removeFromStoredPeerIds(peerIdsToDelete as NSSet)
+            managedFolder.addToStoredPeerIds(peerIdsToInsert as NSSet)
+        }
+
+        self.cachedFolders = cachedFolders
+    }
+
     func delete(folderWithId id: Folder.Id) -> Result<Void> {
-        guard let managedObject = cachedFolders.first(where: { $0.id == id }) else {
+        guard let managedObject = cachedFolders[id] else {
             return .failure(Error.failedToSave)
         }
         context.delete(managedObject)
@@ -89,9 +120,9 @@ final class FolderStorage {
     // MARK: - Initialisation
 
     private func fetchFromDisk() {
-        let fetchRequest = NSFetchRequest<ManagedFolder>(entityName: "ManagedFolder")
+        let fetchRequest = NSFetchRequest<ManagedFolder>(entityName: String(describing: ManagedFolder.self))
         do {
-            self.cachedFolders = try self.context.fetch(fetchRequest)
+            self.cachedFolders = try .init(uniqueKeysWithValues: context.fetch(fetchRequest).map { ($0.id, $0) })
         } catch {
             print(error)
         }

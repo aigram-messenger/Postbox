@@ -665,39 +665,10 @@ final class ViewTracker {
 
 extension ViewTracker {
 
-//    func set(chatListHandler: ChatListHandler) {
-//
-//    }
-
-//    func change(chatListMode: InteranlChatListMode) {
-//        self.chatListMode = chatListMode
-//
-//        let filter: GroupingFilter?
-//        switch chatListMode {
-//        case .standard:
-//            filter = GroupingFilter(filterType: <#T##FilterType#>, isIncluded: <#T##IsIncludedClosure##IsIncludedClosure##(Peer, FilterType) -> Bool#>, fetchPeer: <#T##GroupingFilter.PeerFetchingClosure##GroupingFilter.PeerFetchingClosure##(PeerId) -> Peer?#>)
-//        case .filter(let type):
-//
-//        case .folders:
-//            <#code#>
-//        }
-//
-//        for (mutableView, pipe) in self.chatListViews.copyItems() {
-//            pipe.putNext((ChatListView(mutableView, filter: nil), .Generic))
-//        }
-//    }
-
     func chatListModeDidUpdate() {
         for (mutableView, pipe) in self.chatListViews.copyItems() {
             pipe.putNext((ChatListView(mutableView, chatListHandler: chatListHandler), .Generic))
         }
     }
-
-//    func update(filter: GroupingFilter) {
-//        self.filter = filter
-//        for (mutableView, pipe) in self.chatListViews.copyItems() {
-//            pipe.putNext((ChatListView(mutableView, filter: filter), .Generic))
-//        }
-//    }
 
 }

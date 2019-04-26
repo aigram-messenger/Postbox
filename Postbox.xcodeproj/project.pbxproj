@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		18045D54227198E400A6A473 /* NSPersistentContainer+ClassInit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18045D53227198E400A6A473 /* NSPersistentContainer+ClassInit.swift */; };
+		18045D562271997200A6A473 /* NSManagedObjectModel+ClassInit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18045D552271997200A6A473 /* NSManagedObjectModel+ClassInit.swift */; };
+		18045D582271A84000A6A473 /* Optional+NonNilAssertion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18045D572271A84000A6A473 /* Optional+NonNilAssertion.swift */; };
+		18045D5A2271A87400A6A473 /* Sequence+Collect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18045D592271A87400A6A473 /* Sequence+Collect.swift */; };
 		18182A322265C92000A2FF86 /* FolderManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18182A312265C92000A2FF86 /* FolderManager.swift */; };
 		18182A342265C95800A2FF86 /* Folder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18182A332265C95800A2FF86 /* Folder.swift */; };
 		18182A362265CA5400A2FF86 /* IdGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18182A352265CA5400A2FF86 /* IdGenerator.swift */; };
@@ -405,6 +409,10 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		18045D53227198E400A6A473 /* NSPersistentContainer+ClassInit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NSPersistentContainer+ClassInit.swift"; sourceTree = "<group>"; };
+		18045D552271997200A6A473 /* NSManagedObjectModel+ClassInit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NSManagedObjectModel+ClassInit.swift"; sourceTree = "<group>"; };
+		18045D572271A84000A6A473 /* Optional+NonNilAssertion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Optional+NonNilAssertion.swift"; sourceTree = "<group>"; };
+		18045D592271A87400A6A473 /* Sequence+Collect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sequence+Collect.swift"; sourceTree = "<group>"; };
 		18182A312265C92000A2FF86 /* FolderManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderManager.swift; sourceTree = "<group>"; };
 		18182A332265C95800A2FF86 /* Folder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Folder.swift; sourceTree = "<group>"; };
 		18182A352265CA5400A2FF86 /* IdGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdGenerator.swift; sourceTree = "<group>"; };
@@ -644,9 +652,31 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		18045D51227198A600A6A473 /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				18045D53227198E400A6A473 /* NSPersistentContainer+ClassInit.swift */,
+				18045D552271997200A6A473 /* NSManagedObjectModel+ClassInit.swift */,
+				18045D572271A84000A6A473 /* Optional+NonNilAssertion.swift */,
+				18045D592271A87400A6A473 /* Sequence+Collect.swift */,
+			);
+			name = Extensions;
+			sourceTree = "<group>";
+		};
+		1810C90F2270582700270405 /* ManagedEntities */ = {
+			isa = PBXGroup;
+			children = (
+				18182A3B2265E0E800A2FF86 /* ManagedFolder.swift */,
+				18182A41226601EC00A2FF86 /* ManagedFolder.xcdatamodeld */,
+				1818E1E2226CD71A007C8F8F /* ManagedPeerId.swift */,
+			);
+			name = ManagedEntities;
+			sourceTree = "<group>";
+		};
 		18182A302265C8DD00A2FF86 /* FolderManager */ = {
 			isa = PBXGroup;
 			children = (
+				18045D51227198A600A6A473 /* Extensions */,
 				18182A3A2265E0D700A2FF86 /* Models */,
 				18182A312265C92000A2FF86 /* FolderManager.swift */,
 				18182A352265CA5400A2FF86 /* IdGenerator.swift */,
@@ -658,10 +688,8 @@
 		18182A3A2265E0D700A2FF86 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				1810C90F2270582700270405 /* ManagedEntities */,
 				18182A332265C95800A2FF86 /* Folder.swift */,
-				18182A3B2265E0E800A2FF86 /* ManagedFolder.swift */,
-				18182A41226601EC00A2FF86 /* ManagedFolder.xcdatamodeld */,
-				1818E1E2226CD71A007C8F8F /* ManagedPeerId.swift */,
 			);
 			name = Models;
 			sourceTree = "<group>";
@@ -1466,11 +1494,13 @@
 				D0F9E86B1C59719800037222 /* ChatListView.swift in Sources */,
 				D0D949F51D35353900740E02 /* MappedFile.swift in Sources */,
 				D003E4E61B38DBDB00C22CBC /* MessageHistoryView.swift in Sources */,
+				18045D562271997200A6A473 /* NSManagedObjectModel+ClassInit.swift in Sources */,
 				D0C26D811FE41323004ABF18 /* ChatListGroupReferenceUnreadCounters.swift in Sources */,
 				D0AB0B8E1D65D49C002C78E7 /* ChatListHolesView.swift in Sources */,
 				D0AAD1B21E3266B100D5B9DE /* TimestampBasedMessageAttributesIndexTable.swift in Sources */,
 				D07827C51E00B23F00071108 /* PeerNameIndexTable.swift in Sources */,
 				D03120FA1DA540F0006A2A60 /* CachedPeerData.swift in Sources */,
+				18045D54227198E400A6A473 /* NSPersistentContainer+ClassInit.swift in Sources */,
 				D07516791B2EC90400AE42E0 /* SQLite-Bridging.m in Sources */,
 				D0977FA01B8244D7009994B2 /* SqliteValueBox.swift in Sources */,
 				1818E1E3226CD71A007C8F8F /* ManagedPeerId.swift in Sources */,
@@ -1520,6 +1550,7 @@
 				D0B166EA1F9D142A00976B40 /* MessageOfInterestHolesView.swift in Sources */,
 				D07047A21F3CE58200F6A8D4 /* PendingMessageActionsTable.swift in Sources */,
 				D01BAA551ED1D70C00295217 /* ManagedFile.swift in Sources */,
+				18045D5A2271A87400A6A473 /* Sequence+Collect.swift in Sources */,
 				D0BEAF6A1E54B5FB00BD963D /* AccountManagerMetadataTable.swift in Sources */,
 				D0F02CDF1E99223D0065DEE2 /* Upgrades.swift in Sources */,
 				D08775001E3E3D9F00A97350 /* PreferencesTable.swift in Sources */,
@@ -1550,6 +1581,7 @@
 				D0977F9C1B822DB4009994B2 /* ValueBox.swift in Sources */,
 				D07516441B2D9CEF00AE42E0 /* sqlite3.c in Sources */,
 				D001388620BD942B007C9721 /* PostboxUpgrade_16to17.swift in Sources */,
+				18045D582271A84000A6A473 /* Optional+NonNilAssertion.swift in Sources */,
 				1863C2B122564275003D5CB2 /* GroupingFilter.swift in Sources */,
 				D0D511001D64A58900A97B8A /* IpcPipe.swift in Sources */,
 				D01C7EDE1EF73F71008305F1 /* MessageHistoryTextIndexTable.swift in Sources */,

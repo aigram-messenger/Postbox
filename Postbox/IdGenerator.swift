@@ -7,11 +7,13 @@
 //
 
 private let kIdGeneratorStorage = "org.telegram.Postbox.IdGenerator"
+private let kIdGeneratorQueue = "org.telegram.Postbox.IdGenerator"
 
 final class IdGenerator {
 
     static let shared: IdGenerator = .init()
 
+    private let queue: DispatchQueue = .init(label: kIdGeneratorQueue, qos: .utility)
     private let storage: UserDefaults = .standard
 
     private lazy var lastId: Folder.Id = retrieveLastId()
@@ -20,22 +22,24 @@ final class IdGenerator {
 
     func generateId() -> Folder.Id {
         let newId = lastId + 1
-        store(lastId: newId)
+        update(lastId: newId)
         return newId
     }
 
     // MARK: - Storage access
 
-    private func store(lastId: Folder.Id) {
+    private func update(lastId: Folder.Id) {
+        self.lastId = lastId
+
         // This operation wouldn't create race condition
         // as the user wouldn't be able to create more than one folder in several seconds.
-        DispatchQueue.global(qos: .utility).async { [weak storage] in
+        queue.async { [weak storage] in
             storage?.set(lastId, forKey: kIdGeneratorStorage)
         }
     }
 
     private func retrieveLastId() -> Folder.Id {
-        return storage.object(forKey: kIdGeneratorStorage) as? Int64 ?? 1
+        return storage.object(forKey: kIdGeneratorStorage) as? Int32 ?? 0
     }
 
 }

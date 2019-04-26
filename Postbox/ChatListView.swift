@@ -63,7 +63,6 @@ public enum ChatListEntry: Comparable {
     case MessageEntry(ChatListIndex, Message?, CombinedPeerReadState?, PeerNotificationSettings?, PeerChatListEmbeddedInterfaceState?, RenderedPeer, ChatListMessageTagSummaryInfo)
     case HoleEntry(ChatListHole)
     case GroupReferenceEntry(PeerGroupId, ChatListIndex, Message?, [Peer], GroupReferenceUnreadCounters)
-    case Folder(Folder, ChatListIndex)
     
     public var index: ChatListIndex {
         switch self {
@@ -72,8 +71,6 @@ public enum ChatListEntry: Comparable {
             case let .HoleEntry(hole):
                 return ChatListIndex(pinningIndex: nil, messageIndex: hole.index)
             case let .GroupReferenceEntry(_, index, _, _, _):
-                return index
-            case let .Folder(_, index):
                 return index
         }
     }
@@ -138,12 +135,6 @@ public enum ChatListEntry: Comparable {
                         return false
                     }
                     return true
-                } else {
-                    return false
-                }
-            case let .Folder(lhsFolder, _):
-                if case let .Folder(rhsFolder, _) = rhs {
-                    return lhsFolder.id == rhsFolder.id
                 } else {
                     return false
                 }
@@ -307,6 +298,7 @@ final class MutableChatListView {
     }
     private var count: Int
 
+    var applyFiltration: Bool = false
     var unreadCategoriesCallback: ([FilterType]) -> Void = { _ in }
     var isIncluded: IsIncludedClosure = { _, _ in true }
     
@@ -805,7 +797,7 @@ public final class ChatListView {
         self.groupId = mutableView.groupId
         
         var entries: [ChatListEntry] = []
-        for entry in chatListHandler(mutableView.entries) {
+        for entry in mutableView.applyFiltration ? chatListHandler(mutableView.entries, true) : mutableView.entries {
             switch entry {
                 case let .MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, summaryInfo):
                     entries.append(.MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, summaryInfo))
@@ -827,7 +819,7 @@ public final class ChatListView {
         self.laterIndex = mutableView.later?.index
 
         var additionalItemEntries: [ChatListEntry] = []
-        for entry in chatListHandler(mutableView.additionalItemEntries) {
+        for entry in mutableView.applyFiltration ? chatListHandler(mutableView.additionalItemEntries, false) : mutableView.additionalItemEntries {
             switch entry {
                 case let .MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, summaryInfo):
                     additionalItemEntries.append(.MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, summaryInfo))

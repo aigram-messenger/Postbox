@@ -1074,13 +1074,12 @@ public final class Postbox {
     // MARK: - Folders
 
     private let folderManager: FolderManager = .shared
+    private var messagesDisposable: Disposable?
 
     // MARK: - Filtration
 
     private let isIncluded: IsIncludedClosure
-
     private var chatListMode: InternalChatListMode = .standard
-//    private var filter: GroupingFilter = .init(filterType: .all, isIncluded: { _, _ in true }, fetchPeer: { _ in nil })
 
     // MARK: - Unread categories
 
@@ -1324,6 +1323,8 @@ public final class Postbox {
         }, unsentMessageIds: self.messageHistoryUnsentTable.get(), synchronizePeerReadStateOperations: self.synchronizeReadStateTable.get(getCombinedPeerReadState: { peerId in
             return self.readStateTable.getCombinedState(peerId)
         }), chatListHandler: chatListHandler)
+
+        setup()
         
         print("(Postbox initialization took \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
         
@@ -1337,6 +1338,7 @@ public final class Postbox {
     }
     
     deinit {
+        messagesDisposable?.dispose()
         assert(true)
     }
     
@@ -2722,18 +2724,21 @@ public final class Postbox {
         } |> switchToLatest
     }
     
-    public func tailChatListView(groupId: PeerGroupId?, count: Int, summaryComponents: ChatListEntrySummaryComponents) -> Signal<(ChatListView, ViewUpdateType), NoError> {
-        return self.aroundChatListView(groupId: groupId, index: ChatListIndex.absoluteUpperBound, count: count, summaryComponents: summaryComponents)
+    public func tailChatListView(groupId: PeerGroupId?, count: Int, summaryComponents: ChatListEntrySummaryComponents, applyFiltration: Bool = false) -> Signal<(ChatListView, ViewUpdateType), NoError> {
+        return self.aroundChatListView(groupId: groupId, index: ChatListIndex.absoluteUpperBound, count: count, summaryComponents: summaryComponents, applyFiltration: applyFiltration)
     }
-    
-    public func aroundChatListView(groupId: PeerGroupId?, index: ChatListIndex, count: Int, summaryComponents: ChatListEntrySummaryComponents) -> Signal<(ChatListView, ViewUpdateType), NoError> {
+
+    public func aroundChatListView(groupId: PeerGroupId?, index: ChatListIndex, count: Int, summaryComponents: ChatListEntrySummaryComponents, applyFiltration: Bool = false) -> Signal<(ChatListView, ViewUpdateType), NoError> {
         return self.transactionSignal { subscriber, transaction in
             let count = 100_000
             let (entries, earlier, later) = self.fetchAroundChatEntries(groupId: groupId, index: index, count: count)
             
             let mutableView = MutableChatListView(postbox: self, groupId: groupId, earlier: earlier, entries: entries, later: later, count: count, summaryComponents: summaryComponents)
+
             mutableView.unreadCategoriesCallback = self.unreadCategoriesCallback
             mutableView.isIncluded = self.isIncluded
+            mutableView.applyFiltration = applyFiltration
+
             mutableView.render(postbox: self, renderMessage: self.renderIntermediateMessage, getPeer: { id in
                 return self.peerTable.get(id)
             }, getPeerNotificationSettings: { self.peerNotificationSettingsTable.getEffective($0) })
@@ -3460,16 +3465,35 @@ public final class Postbox {
             case let .filter(filter):
                 return filter.filter(entries: $0)
             case let .folders(folders):
-                // TODO: Implement.
-                return $0
+                guard $1 else { return [] }
+                return folders.enumerated().compactMap {
+                    guard let message = $1.lastMessage else { return nil }
+
+                    let renderedPeer = RenderedPeer(peer: $1)
+
+                    let messageIndex = MessageIndex(id: message.id, timestamp: message.timestamp)
+                    let chatListIndex = ChatListIndex(pinningIndex: nil, messageIndex: messageIndex)
+
+                    return .MessageEntry(chatListIndex, $1.lastMessage, nil, nil, nil, renderedPeer, .init())
+                }
         }
+    }
+
+}
+
+// MARK: - General
+
+extension Postbox {
+
+    private func setup() {
+        watchChatListUpdates()
     }
 
 }
 
 // MARK: - Filteration
 
-typealias ChatListHandler = ([MutableChatListEntry]) -> [MutableChatListEntry]
+typealias ChatListHandler = ([MutableChatListEntry], Bool) -> [MutableChatListEntry]
 
 extension Postbox {
 
@@ -3487,6 +3511,8 @@ extension Postbox {
 //    }
 
     private func set(chatListMode: ChatListMode) {
+        folderManager.updateClosure = nil
+        
         switch chatListMode {
         case .standard:
             self.chatListMode = .standard
@@ -3500,8 +3526,11 @@ extension Postbox {
             )
             self.chatListMode = .filter(filter)
         case .folders:
-            // TODO: Implement
-            break
+            folderManager.updateClosure = { [weak self] in
+                self?.chatListMode = .folders($0)
+            }
+//            let folders = folderManager.folders
+//            self.chatListMode = .folders(folders)
         }
     }
 
@@ -3522,7 +3551,41 @@ extension Postbox {
 public extension Postbox {
 
     public func createFolder(with name: String, peers: [PeerId]) {
+
+//        tailChatListView(groupId: nil, count: 0, summaryComponents: .init())
+//            .start(next: { [weak folderManager] chatListView, update in
+//
+//            })
         folderManager.createFolder(with: name, peerIds: peers)
+        viewTracker.chatListModeDidUpdate()
+
+    }
+
+    /// Initiates watching updates for the chat list in order to keep folders up to date.
+    private func watchChatListUpdates() {
+        messagesDisposable = self.tailChatListView(groupId: nil, count: 0, summaryComponents: .init())
+            .start(next: { [weak folderManager] chatListView, update in
+                var messages: [(message: Message, chat: Peer)] = []
+                switch update {
+                    case let .InitialUnread(index):
+                        break
+                    case .Generic:
+                        messages = chatListView.entries.compactMap {
+                            guard
+                                case let .MessageEntry(_, message?, _, _, _, renderedPeer, _) = $0,
+                                let peer = renderedPeer.peer
+                            else { return nil }
+
+                            return (message: message, chat: peer)
+                        }
+                    case let .FillHole(insertions, deletions):
+                        break
+                    case .UpdateVisible:
+                        break
+                }
+                guard !messages.isEmpty else { return }
+                folderManager?.process(messages: messages)
+            })
     }
 
 }
