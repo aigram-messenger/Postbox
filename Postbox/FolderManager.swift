@@ -82,8 +82,7 @@ final class FolderManager {
     }
 
     func process(messages: [(message: Message, chat: Peer)]) {
-        var filteredMessages: [PeerId: (message: Message, chat: Peer)] =
-            messages.reduce(into: [:]) {
+        var filteredMessages: [PeerId: (message: Message, chat: Peer)] = messages.reduce(into: [:]) {
             if let oldValue = $0[$1.chat.id] {
                 guard oldValue.message.timestamp < $1.message.timestamp else { return }
                 $0[$1.chat.id] = $1

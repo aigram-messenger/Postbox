@@ -3502,14 +3502,6 @@ extension Postbox {
         viewTracker.chatListModeDidUpdate()
     }
 
-//    public func changeFilter(to filterType: FilterType) {
-//        guard filter.filterType != filterType else { return }
-//        filter = GroupingFilter(filterType: filterType, isIncluded: isIncluded, fetchPeer: { [weak self] in
-//            return self?.peerTable.get($0) ?? nil
-//        })
-//        viewTracker.update(filter: filter)
-//    }
-
     private func set(chatListMode: ChatListMode) {
         folderManager.updateClosure = nil
         
@@ -3529,8 +3521,6 @@ extension Postbox {
             folderManager.updateClosure = { [weak self] in
                 self?.chatListMode = .folders($0)
             }
-//            let folders = folderManager.folders
-//            self.chatListMode = .folders(folders)
         }
     }
 

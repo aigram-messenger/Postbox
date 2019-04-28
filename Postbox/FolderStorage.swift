@@ -44,11 +44,6 @@ final class FolderStorage {
     private init() {
         observeAppTermination()
         fetchFromDisk()
-//        cachedFolders.forEach {
-//            context.delete($1)
-//        }
-//        try? context.save()
-//        cachedFolders.removeAll()
     }
 
     deinit {
@@ -61,7 +56,7 @@ final class FolderStorage {
 
     func create(folder: Folder) -> Result<Void> {
         guard cachedFolders[folder.folderId] == nil else {
-            return .failure(NSError())
+            return .failure(Error.failedToSave)
         }
 
         let managedFolder = ManagedFolder(context: context, plainEntity: folder)
@@ -86,7 +81,7 @@ final class FolderStorage {
         var cachedFolders = self.cachedFolders
         for folder in folders {
             guard let managedFolder = cachedFolders[folder.folderId] else {
-                assertionFailure("Folder \(folder.name)")
+                assertionFailure("Folder \(folder.name) either does not exist or in-memory cache was corrupted.")
                 continue
             }
 
