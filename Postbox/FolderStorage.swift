@@ -75,10 +75,17 @@ final class FolderStorage {
 
     }
 
+    /// Udpates folders.
+    ///
+    /// - Note: If `peerIds` set contains no elements for certain folder, it'll be removed instead of being updated.
+    ///
+    /// - Parameter folders: Folders that were updated.
     func update(folders: [Folder]) {
         guard !folders.isEmpty else { return }
 
+        var foldersToDelete: [ManagedFolder] = []
         var cachedFolders = self.cachedFolders
+
         for folder in folders {
             guard let managedFolder = cachedFolders[folder.folderId] else {
                 assertionFailure("Folder \(folder.name) either does not exist or in-memory cache was corrupted.")
@@ -89,19 +96,32 @@ final class FolderStorage {
                 .filter { !folder.peerIds.contains($0.toPlainEntity()) }
 
             let peerIdsToInsert = folder.peerIds
-                    .lazy
-                    .filter { peerId in
-                        !managedFolder.peerIds.contains { $0.id == peerId.id && $0.namespace == peerId.namespace }
-                    }
-                    .map { ManagedPeerId(context: self.context, plainEntity: $0) }
-                    .collect()
+                .lazy
+                .filter { peerId in
+                    !managedFolder.peerIds.contains { $0.id == peerId.id && $0.namespace == peerId.namespace }
+                }
+                .map { ManagedPeerId(context: self.context, plainEntity: $0) }
+                .collect()
 
             managedFolder.name = folder.name
             managedFolder.removeFromStoredPeerIds(peerIdsToDelete as NSSet)
             managedFolder.addToStoredPeerIds(peerIdsToInsert as NSSet)
+
+            if managedFolder.peerIds.isEmpty {
+                foldersToDelete.append(managedFolder)
+            }
         }
 
         self.cachedFolders = cachedFolders
+            .filter { !$0.value.peerIds.isEmpty }
+
+        foldersToDelete.forEach(context.delete)
+
+        do {
+            try context.save()
+        } catch {
+            print(error)
+        }
     }
 
     func delete(folderWithId id: Folder.Id) -> Result<Void> {
@@ -109,8 +129,13 @@ final class FolderStorage {
             return .failure(Error.failedToRetrieve)
         }
 
-        managedObject.removeFromStoredPeerIds(managedObject.storedPeerIds ?? NSSet())
-        context.delete(managedObject)
+        delete(managedFolder: managedObject)
+
+        do {
+            try context.save()
+        } catch {
+            print(error)
+        }
 
         return .success(())
     }
@@ -136,6 +161,15 @@ final class FolderStorage {
                 print(error)
             }
         }
+    }
+
+    private func delete(managedFolder: ManagedFolder) {
+        let id = managedFolder.id
+
+        managedFolder.removeFromStoredPeerIds(managedFolder.storedPeerIds ?? NSSet())
+        context.delete(managedFolder)
+
+        cachedFolders.removeValue(forKey: id)
     }
 
 }

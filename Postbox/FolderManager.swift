@@ -81,6 +81,23 @@ final class FolderManager {
         fatalError("\(#function) is not implemented.")
     }
 
+    func process(deletedPeerWithId id: PeerId) -> Bool {
+        let foldersToUpdate = folders
+            .lazy
+            .filter { $0.peerIds.contains(id) }
+            .map { (folder) -> Folder in
+                folder.peerIds.remove(id)
+                return folder
+            }
+            .collect()
+
+        guard !foldersToUpdate.isEmpty else { return false }
+
+        folderStorage.update(folders: foldersToUpdate)
+
+        return true
+    }
+
     func process(messages: [(message: Message, chat: Peer)]) {
         var filteredMessages: [PeerId: (message: Message, chat: Peer)] = messages.reduce(into: [:]) {
             if let oldValue = $0[$1.chat.id] {

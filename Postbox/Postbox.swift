@@ -3550,6 +3550,11 @@ public extension Postbox {
         viewTracker.chatListModeDidUpdate()
     }
 
+    public func process(deletedPeerWithId id: PeerId) {
+        let isUpdateRequired = folderManager.process(deletedPeerWithId: id)
+        if isUpdateRequired { viewTracker.chatListModeDidUpdate() }
+    }
+
     /// Initiates watching updates for the chat list in order to keep folders up to date.
     private func watchChatListUpdates() {
         messagesDisposable = self.tailChatListView(groupId: nil, count: 0, summaryComponents: .init())
