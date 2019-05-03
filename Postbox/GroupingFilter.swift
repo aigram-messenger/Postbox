@@ -88,7 +88,7 @@ struct GroupingFilter {
         case .IntermediateMessageEntry, .HoleEntry, .IntermediateGroupReferenceEntry:
             return true
         case .GroupReferenceEntry:
-            print(entry)
+            assertionFailure("\(entry)")
             return true
         case let .MessageEntry(_, _, _, _, _, renderedPeer, _):
             // TODO: Что будет, если пользователь не подтянут в кеш? Как это фильтровать?

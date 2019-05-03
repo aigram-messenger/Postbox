@@ -53,6 +53,10 @@ final class FolderManager {
         }
     }
 
+    func folder(with id: Folder.Id) -> Folder? {
+        return cachedFolders.first { $0.folderId == id }
+    }
+
     func createFolder(with name: String, peerIds: [PeerId]) {
         let result = folderStorage.create(
             folder: .init(

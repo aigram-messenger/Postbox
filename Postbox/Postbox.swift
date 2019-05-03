@@ -3540,6 +3540,10 @@ extension Postbox {
 
 public extension Postbox {
 
+    public func folder(with id: Folder.Id) -> Folder? {
+        return folderManager.folder(with: id)
+    }
+
     public func delete(folderWithId id: PeerId) {
         folderManager.delete(folderWithId: -id.id)
         viewTracker.chatListModeDidUpdate()
