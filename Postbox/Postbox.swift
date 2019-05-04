@@ -1079,7 +1079,6 @@ public final class Postbox {
     // MARK: - Filtration
 
     private let isIncluded: IsIncludedClosure
-    private var chatListMode: InternalChatListMode = .standard
 
     // MARK: - Unread categories
 
@@ -2724,11 +2723,11 @@ public final class Postbox {
         } |> switchToLatest
     }
     
-    public func tailChatListView(groupId: PeerGroupId?, count: Int, summaryComponents: ChatListEntrySummaryComponents, applyFiltration: Bool = false) -> Signal<(ChatListView, ViewUpdateType), NoError> {
-        return self.aroundChatListView(groupId: groupId, index: ChatListIndex.absoluteUpperBound, count: count, summaryComponents: summaryComponents, applyFiltration: applyFiltration)
+    public func tailChatListView(groupId: PeerGroupId?, count: Int, summaryComponents: ChatListEntrySummaryComponents, applyFiltration: Bool = false, setupChatListModeHandler: SetupChatListModeCallback? = nil) -> Signal<(ChatListView, ViewUpdateType), NoError> {
+        return self.aroundChatListView(groupId: groupId, index: ChatListIndex.absoluteUpperBound, count: count, summaryComponents: summaryComponents, applyFiltration: applyFiltration, setupChatListModeHandler: setupChatListModeHandler)
     }
 
-    public func aroundChatListView(groupId: PeerGroupId?, index: ChatListIndex, count: Int, summaryComponents: ChatListEntrySummaryComponents, applyFiltration: Bool = false) -> Signal<(ChatListView, ViewUpdateType), NoError> {
+    public func aroundChatListView(groupId: PeerGroupId?, index: ChatListIndex, count: Int, summaryComponents: ChatListEntrySummaryComponents, applyFiltration: Bool = false, setupChatListModeHandler: SetupChatListModeCallback? = nil) -> Signal<(ChatListView, ViewUpdateType), NoError> {
         return self.transactionSignal { subscriber, transaction in
             let count = 100_000
             let (entries, earlier, later) = self.fetchAroundChatEntries(groupId: groupId, index: index, count: count)
@@ -2738,6 +2737,10 @@ public final class Postbox {
             mutableView.unreadCategoriesCallback = self.unreadCategoriesCallback
             mutableView.isIncluded = self.isIncluded
             mutableView.applyFiltration = applyFiltration
+            setupChatListModeHandler? { [weak self] in
+                self?.update(chatListView: mutableView, with: $0)
+                self?.viewTracker.chatListModeDidUpdate()
+            }
 
             mutableView.render(postbox: self, renderMessage: self.renderIntermediateMessage, getPeer: { id in
                 return self.peerTable.get(id)
@@ -3456,10 +3459,8 @@ public final class Postbox {
 
     // MARK: - Chat list mode
 
-    private lazy var chatListHandler: ChatListHandler = { [weak self] in
-        let mode = self?.chatListMode ?? .standard
-
-        switch mode {
+    private lazy var chatListHandler: ChatListFilterClosure = { [weak self] in
+        switch $2 {
             case .standard:
                 return $0
             case let .filter(filter):
@@ -3493,34 +3494,32 @@ extension Postbox {
 
 // MARK: - Filteration
 
-typealias ChatListHandler = ([MutableChatListEntry], Bool) -> [MutableChatListEntry]
+typealias ChatListFilterClosure = ([MutableChatListEntry], Bool, InternalChatListMode) -> [MutableChatListEntry]
+public typealias SetupChatListModeCallback = (@escaping (ChatListMode) -> Void) -> Void
 
 extension Postbox {
 
-    public func change(chatListMode: ChatListMode) {
-        set(chatListMode: chatListMode)
-        viewTracker.chatListModeDidUpdate()
-    }
-
-    private func set(chatListMode: ChatListMode) {
+    private func update(chatListView: MutableChatListView, with chatListMode: ChatListMode) {
         folderManager.updateClosure = nil
-        
+
         switch chatListMode {
-        case .standard:
-            self.chatListMode = .standard
-        case let .filter(type):
-            let filter = GroupingFilter(
-                filterType: type,
-                isIncluded: isIncluded,
-                fetchPeer: { [weak self] in
-                    return self?.peerTable.get($0) ?? nil
+            case .standard:
+                chatListView.chatListMode = .standard
+            case let .filter(type):
+                let filter = GroupingFilter(
+                    filterType: type,
+                    isIncluded: isIncluded,
+                    fetchPeer: { [weak self] in
+                        return self?.peerTable.get($0) ?? nil
+                    }
+                )
+                chatListView.chatListMode = .filter(filter)
+            case .folders:
+                // TODO: This wouldn't work for multiple views working with folders.
+                // TODO: Is there any need to fix it?
+                folderManager.updateClosure = { [weak chatListView] in
+                    chatListView?.chatListMode = .folders($0)
                 }
-            )
-            self.chatListMode = .filter(filter)
-        case .folders:
-            folderManager.updateClosure = { [weak self] in
-                self?.chatListMode = .folders($0)
-            }
         }
     }
 
