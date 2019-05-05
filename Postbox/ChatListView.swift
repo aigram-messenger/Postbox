@@ -305,6 +305,7 @@ final class MutableChatListView {
     var applyFiltration: Bool = false
     var unreadCategoriesCallback: ([FilterType]) -> Void = { _ in }
     var isIncluded: IsIncludedClosure = { _, _ in true }
+    var folderManagerUpdateToken: FolderManager.UpdateToken?
 
     // MARK: -
     

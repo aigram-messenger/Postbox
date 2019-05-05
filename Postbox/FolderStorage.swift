@@ -163,6 +163,8 @@ final class FolderStorage {
         }
     }
 
+    // MARK: - CRUD helpers
+
     private func delete(managedFolder: ManagedFolder) {
         let id = managedFolder.id
 

@@ -11,6 +11,11 @@ public enum ChatListMode {
     case standard
     case filter(type: FilterType)
     case folders
+
+    var isFolders: Bool {
+        guard case .folders = self else { return false }
+        return true
+    }
 }
 
 // FIXME: Rename to something more appropriate.
@@ -18,6 +23,11 @@ enum InternalChatListMode {
     case standard
     case filter(GroupingFilter)
     case folders([Folder])
+
+    var isFolders: Bool {
+        guard case .folders = self else { return false }
+        return true
+    }
 }
 
 public enum FilterType {

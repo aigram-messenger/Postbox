@@ -3500,7 +3500,7 @@ public typealias SetupChatListModeCallback = (@escaping (ChatListMode) -> Void) 
 extension Postbox {
 
     private func update(chatListView: MutableChatListView, with chatListMode: ChatListMode) {
-        folderManager.updateClosure = nil
+        chatListView.folderManagerUpdateToken = nil
 
         switch chatListMode {
             case .standard:
@@ -3515,9 +3515,10 @@ extension Postbox {
                 )
                 chatListView.chatListMode = .filter(filter)
             case .folders:
-                // TODO: This wouldn't work for multiple views working with folders.
-                // TODO: Is there any need to fix it?
-                folderManager.updateClosure = { [weak chatListView] in
+                chatListView.folderManagerUpdateToken = folderManager.subscribe { [weak chatListView] in
+                    if (chatListView?.chatListMode.isFolders ?? false) && !chatListMode.isFolders {
+                        return assertionFailure("Invalid update token.")
+                    }
                     chatListView?.chatListMode = .folders($0)
                 }
         }

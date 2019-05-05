@@ -8,17 +8,26 @@
 
 final class FolderManager {
 
+    // MARK: - In-memory cache
+
+    private var updateTokens: [WeakRef<UpdateToken>] = []
+
     private var cachedFolders: [Folder] = [] {
-        didSet {
-            updateClosure?(folders)
-        }
+        didSet { sendFoldersToAllObservers(folders) }
     }
 
     private var cachedLastMessages: [Folder.Id: Message] = [:] {
-        didSet {
-            updateClosure?(folders)
-        }
+        didSet { sendFoldersToAllObservers(folders) }
     }
+
+    // MARK: - Components
+
+    private let folderStorage: FolderStorage = .shared
+    private let idGenerator: IdGenerator = .shared
+
+    // MARK: -
+
+    static var shared: FolderManager = .init()
 
     var folders: [Folder] {
         return cachedFolders
@@ -33,17 +42,6 @@ final class FolderManager {
                 else { return false }
 
                 return leftTimestamp < rightTimestamp
-            }
-    }
-
-    private let folderStorage: FolderStorage = .shared
-    private let idGenerator: IdGenerator = .shared
-
-    static var shared: FolderManager = .init()
-
-    var updateClosure: (([Folder]) -> Void)? {
-        didSet {
-            updateClosure?(folders)
         }
     }
 
@@ -52,6 +50,8 @@ final class FolderManager {
             self?.cachedFolders = $0
         }
     }
+
+    // MARK: - CRUD methods
 
     func folder(with id: Folder.Id) -> Folder? {
         return cachedFolders.first { $0.folderId == id }
@@ -85,6 +85,15 @@ final class FolderManager {
         fatalError("\(#function) is not implemented.")
     }
 
+    // MARK: -
+
+    func subscribe(onUpdates updateClosure: @escaping UpdateClosure) -> UpdateToken {
+        let token = UpdateToken(folderManager: self, updateClosure: updateClosure)
+        updateTokens.append(WeakRef(value: token))
+        updateClosure(folders)
+        return token
+    }
+
     func process(deletedPeerWithId id: PeerId) -> Bool {
         let foldersToUpdate = folders
             .lazy
@@ -103,12 +112,18 @@ final class FolderManager {
     }
 
     func process(messages: [(message: Message, chat: Peer)]) {
-        var filteredMessages: [PeerId: (message: Message, chat: Peer)] = messages.reduce(into: [:]) {
+        let filteredMessages: [PeerId: (message: Message, chat: Peer)] = messages.reduce(into: [:]) {
             if let oldValue = $0[$1.chat.id] {
                 guard oldValue.message.timestamp < $1.message.timestamp else { return }
                 $0[$1.chat.id] = $1
             } else {
                 $0[$1.chat.id] = $1
+            }
+        }
+
+        cachedFolders.forEach {
+            if let id = $0.lastMessage?.author?.id, !$0.peerIds.contains(id) {
+                $0.lastMessage = nil
             }
         }
 
@@ -126,12 +141,63 @@ final class FolderManager {
                     }
             }
 
+        var updatedCachedLastMessages = cachedLastMessages
         updatedFolders.forEach {
-            cachedLastMessages[$0.folderId] = $0.lastMessage?.withUpdatedPeer($0)
+            updatedCachedLastMessages[$0.folderId] = $0.lastMessage?.withUpdatedPeer($0)
+        }
+        cachedLastMessages = updatedCachedLastMessages
+    }
+
+    // MARK: - Token operations
+
+    fileprivate func delete(token: UpdateToken) {
+        updateTokens.removeAll { $0.value === self }
+    }
+
+    private func sendFoldersToAllObservers(_ folders: [Folder]) {
+        updateTokens.forEach {
+            $0.value?.updateClosure(folders)
         }
     }
 
 }
+
+// MARK: - Inner types
+
+extension FolderManager {
+
+    typealias UpdateClosure = ([Folder]) -> Void
+
+    /// Allows to store weak references in collections.
+    final private class WeakRef<T: AnyObject> {
+        weak var value: T?
+
+        init(value: T) {
+            self.value = value
+        }
+    }
+
+    final class UpdateToken {
+        private var folderManager: FolderManager?
+        fileprivate var updateClosure: UpdateClosure
+
+        init(folderManager: FolderManager, updateClosure: @escaping UpdateClosure) {
+            self.folderManager = folderManager
+            self.updateClosure = updateClosure
+        }
+
+        deinit {
+            invalidate()
+        }
+
+        func invalidate() {
+            folderManager?.delete(token: self)
+        }
+    }
+
+}
+
+// MARK: -
 
 private extension Message {
 
