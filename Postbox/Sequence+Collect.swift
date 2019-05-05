@@ -6,7 +6,7 @@
 //  Copyright © 2019 Telegram. All rights reserved.
 //
 
-extension Sequence {
+public extension Sequence {
 
     func collect() -> [Element] {
         return map { $0 }
@@ -14,7 +14,7 @@ extension Sequence {
 
 }
 
-extension Sequence where Element: Hashable {
+public extension Sequence where Element: Hashable {
 
     func collect() -> Set<Element> {
         return .init(self)

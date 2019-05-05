@@ -3561,6 +3561,13 @@ public extension Postbox {
         viewTracker.chatListModeDidUpdate()
     }
 
+    public func add(peerIds: [PeerId], to folder: Folder) {
+        peerIds.forEach { folder.peerIds.insert($0) }
+
+        folderManager.update(folder: folder)
+        viewTracker.chatListModeDidUpdate()
+    }
+
     public func process(deletedPeerWithId id: PeerId) {
         let isUpdateRequired = folderManager.process(deletedPeerWithId: id)
         if isUpdateRequired { viewTracker.chatListModeDidUpdate() }
