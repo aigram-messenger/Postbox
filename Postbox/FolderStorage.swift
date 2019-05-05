@@ -187,6 +187,9 @@ final class FolderStorage {
         managedFolder.name = folder.name
         managedFolder.removeFromStoredPeerIds(peerIdsToDelete as NSSet)
         managedFolder.addToStoredPeerIds(peerIdsToInsert as NSSet)
+
+        // TODO: Investigate. This is supposed to be done in `removeFromStoredPeerIds(_:)` method.
+        peerIdsToDelete.forEach(managedFolder.managedObjectContext!.delete)
     }
 
     private func delete(managedFolder: ManagedFolder) {
