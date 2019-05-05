@@ -3554,6 +3554,13 @@ public extension Postbox {
         viewTracker.chatListModeDidUpdate()
     }
 
+    public func remove(peerWithId peerId: PeerId, from folder: Folder) {
+        folder.peerIds.remove(peerId)
+
+        folderManager.update(folder: folder)
+        viewTracker.chatListModeDidUpdate()
+    }
+
     public func process(deletedPeerWithId id: PeerId) {
         let isUpdateRequired = folderManager.process(deletedPeerWithId: id)
         if isUpdateRequired { viewTracker.chatListModeDidUpdate() }

@@ -71,8 +71,23 @@ final class FolderStorage {
         }
     }
 
+    /// Udpates folder.
+    ///
+    /// - Note: If `peerIds` set contains no elements for the folder, it'll be removed instead of being updated.
+    ///
+    /// - Parameter folders: Folder that were updated.
     func update(folder: Folder) {
+        guard let managedFolder = cachedFolders[folder.folderId] else {
+            return assertionFailure("Folder \(folder.name) either does not exist or in-memory cache was corrupted.")
+        }
 
+        syncronise(managedFolder: managedFolder, with: folder)
+
+        do {
+            try context.save()
+        } catch {
+            print(error)
+        }
     }
 
     /// Udpates folders.
@@ -92,20 +107,7 @@ final class FolderStorage {
                 continue
             }
 
-            let peerIdsToDelete = managedFolder.peerIds
-                .filter { !folder.peerIds.contains($0.toPlainEntity()) }
-
-            let peerIdsToInsert = folder.peerIds
-                .lazy
-                .filter { peerId in
-                    !managedFolder.peerIds.contains { $0.id == peerId.id && $0.namespace == peerId.namespace }
-                }
-                .map { ManagedPeerId(context: self.context, plainEntity: $0) }
-                .collect()
-
-            managedFolder.name = folder.name
-            managedFolder.removeFromStoredPeerIds(peerIdsToDelete as NSSet)
-            managedFolder.addToStoredPeerIds(peerIdsToInsert as NSSet)
+            syncronise(managedFolder: managedFolder, with: folder)
 
             if managedFolder.peerIds.isEmpty {
                 foldersToDelete.append(managedFolder)
@@ -164,6 +166,23 @@ final class FolderStorage {
     }
 
     // MARK: - CRUD helpers
+
+    private func syncronise(managedFolder: ManagedFolder, with folder: Folder) {
+        let peerIdsToDelete = managedFolder.peerIds
+            .filter { !folder.peerIds.contains($0.toPlainEntity()) }
+
+        let peerIdsToInsert = folder.peerIds
+            .lazy
+            .filter { peerId in
+                !managedFolder.peerIds.contains { $0.id == peerId.id && $0.namespace == peerId.namespace }
+            }
+            .map { ManagedPeerId(context: self.context, plainEntity: $0) }
+            .collect()
+
+        managedFolder.name = folder.name
+        managedFolder.removeFromStoredPeerIds(peerIdsToDelete as NSSet)
+        managedFolder.addToStoredPeerIds(peerIdsToInsert as NSSet)
+    }
 
     private func delete(managedFolder: ManagedFolder) {
         let id = managedFolder.id

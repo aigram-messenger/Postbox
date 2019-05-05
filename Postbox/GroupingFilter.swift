@@ -37,11 +37,15 @@ public enum FilterType {
     case channels
     case bots
     case all
-    case custom(Set<PeerId>)
+    case folder(Folder)
 }
 
 // FIXME: Temp. Remove.
 extension FilterType: Hashable {
+    public static func == (lhs: FilterType, rhs: FilterType) -> Bool {
+        return lhs.hashValue == rhs.hashValue
+    }
+
     public var hashValue: Int {
         switch self {
         case .privateChats:
@@ -56,7 +60,7 @@ extension FilterType: Hashable {
             return 4.hashValue
         case .all:
             return 5.hashValue
-        case .custom:
+        case .folder:
             return 6.hashValue
         }
     }

@@ -82,7 +82,7 @@ final class FolderManager {
     }
 
     func update(folder: Folder) {
-        fatalError("\(#function) is not implemented.")
+        folderStorage.update(folder: folder)
     }
 
     // MARK: -
