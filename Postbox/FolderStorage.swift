@@ -83,6 +83,11 @@ final class FolderStorage {
 
         syncronise(managedFolder: managedFolder, with: folder)
 
+        if folder.peerIds.isEmpty {
+            context.delete(managedFolder)
+            cachedFolders.removeValue(forKey: folder.folderId)
+        }
+
         do {
             try context.save()
         } catch {
