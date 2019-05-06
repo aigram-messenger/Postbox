@@ -3468,8 +3468,30 @@ public final class Postbox {
             case let .folders(folders):
                 guard $1 else { return [] }
                 return folders
+                    .lazy
+                    // TODO: Investigate. Why items are displayed in order defined here?
+                    .sorted { lhs, rhs in
+                        switch (lhs.pinningIndex, rhs.pinningIndex) {
+                            case let (li?, ri?):
+                                return li > ri
+                            case (_?, nil):
+                                return false
+                            case (nil, _?):
+                                return true
+                            default:
+                                break
+                        }
 
+                        if let lm = lhs.lastMessage, let rm = rhs.lastMessage {
+                            if lm.timestamp == rm.timestamp {
+                                return lhs.name > rhs.name
+                            }
 
+                            return lm.timestamp < rm.timestamp
+                        } else {
+                            return false
+                        }
+                    }
                     .compactMap {
                         guard let message = $0.lastMessage else { return nil }
 
