@@ -60,9 +60,10 @@ final class FolderManager {
     func createFolder(with name: String, peerIds: [PeerId]) {
         let result = folderStorage.create(
             folder: .init(
-                id: idGenerator.generateId(),
+                folderId: idGenerator.generateId(),
                 name: name,
-                peerIds: peerIds
+                peerIds: peerIds,
+                pinningIndex: nil
             )
         )
 
@@ -92,6 +93,43 @@ final class FolderManager {
         updateTokens.append(WeakRef(value: token))
         updateClosure(folders)
         return token
+    }
+
+    func togglePin(ofFolderWithId id: Folder.Id) throws {
+        guard let folder = folder(with: id) else {
+            return assertionFailure("There is no folder with id (\(id)).")
+        }
+
+        let pinnedFolders = cachedFolders.filter { $0.pinningIndex != nil }
+        if let pinningIndex = folder.pinningIndex {
+            let foldersToUpdate = pinnedFolders
+                .filter { $0.pinningIndex.map { $0 > pinningIndex } ?? false }
+
+            foldersToUpdate.forEach {
+                $0.pinningIndex = $0.pinningIndex.map { $0 - 1 }
+            }
+            
+            folder.pinningIndex = nil
+        } else {
+            let maxPinningIndex = pinnedFolders
+                .lazy
+                .compactMap { $0.pinningIndex }
+                .max() ?? 0
+
+            guard maxPinningIndex < 4 else {
+                // TODO: Make normal error throwing.
+                throw NSError()
+            }
+
+            pinnedFolders.forEach {
+                $0.pinningIndex = $0.pinningIndex.map { $0 + 1 }
+            }
+
+            folder.pinningIndex = 0
+        }
+
+
+        folderStorage.update(folder: folder)
     }
 
     func process(deletedPeerWithId id: PeerId) -> Bool {

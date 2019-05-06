@@ -3467,16 +3467,20 @@ public final class Postbox {
                 return filter.filter(entries: $0)
             case let .folders(folders):
                 guard $1 else { return [] }
-                return folders.enumerated().compactMap {
-                    guard let message = $1.lastMessage else { return nil }
+                return folders
 
-                    let renderedPeer = RenderedPeer(peer: $1)
 
-                    let messageIndex = MessageIndex(id: message.id, timestamp: message.timestamp)
-                    let chatListIndex = ChatListIndex(pinningIndex: nil, messageIndex: messageIndex)
+                    .compactMap {
+                        guard let message = $0.lastMessage else { return nil }
 
-                    return .MessageEntry(chatListIndex, $1.lastMessage, nil, nil, nil, renderedPeer, .init())
-                }
+                        let renderedPeer = RenderedPeer(peer: $0)
+
+                        let messageIndex = MessageIndex(id: message.id, timestamp: message.timestamp)
+                        let chatListIndex = ChatListIndex(pinningIndex: $0.pinningIndex, messageIndex: messageIndex)
+
+                        return .MessageEntry(chatListIndex, $0.lastMessage, nil, nil, nil, renderedPeer, .init())
+                    }
+
         }
     }
 
@@ -3571,6 +3575,11 @@ public extension Postbox {
     public func process(deletedPeerWithId id: PeerId) {
         let isUpdateRequired = folderManager.process(deletedPeerWithId: id)
         if isUpdateRequired { viewTracker.chatListModeDidUpdate() }
+    }
+
+    public func togglePin(forFolderWithPeerId peerId: PeerId) throws {
+        try folderManager.togglePin(ofFolderWithId: -peerId.id)
+        viewTracker.chatListModeDidUpdate()
     }
 
     /// Initiates watching updates for the chat list in order to keep folders up to date.

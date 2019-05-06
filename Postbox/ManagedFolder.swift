@@ -33,7 +33,12 @@ extension ManagedFolder {
     }
 
     func toPlainEntity() -> Folder {
-        return Folder(id: id, name: name ?? "", peerIds: peerIds.toPlainEntities())
+        return Folder(
+            folderId: id,
+            name: name ?? "",
+            peerIds: peerIds.toPlainEntities(),
+            pinningIndex: pinningIndex < 0 ? nil : UInt16(pinningIndex)
+        )
     }
 
 }

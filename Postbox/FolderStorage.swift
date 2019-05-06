@@ -185,6 +185,7 @@ final class FolderStorage {
             .collect()
 
         managedFolder.name = folder.name
+        managedFolder.pinningIndex = folder.pinningIndex.map { Int16($0) } ?? -1
         managedFolder.removeFromStoredPeerIds(peerIdsToDelete as NSSet)
         managedFolder.addToStoredPeerIds(peerIdsToInsert as NSSet)
 

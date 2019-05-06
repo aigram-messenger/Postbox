@@ -15,15 +15,18 @@ public final class Folder {
     public var name: String
     public var peerIds: Set<PeerId>
     public var lastMessage: Message?
+    public var pinningIndex: UInt16?
 
     init(
-        id: Id,
+        folderId: Id,
         name: String,
-        peerIds: [PeerId]
+        peerIds: [PeerId],
+        pinningIndex: UInt16?
     ) {
-        self.folderId = id
+        self.folderId = folderId
         self.name = name
         self.peerIds = Set(peerIds)
+        self.pinningIndex = pinningIndex
     }
 }
 
