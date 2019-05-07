@@ -3582,7 +3582,7 @@ public extension Postbox {
 
     public func rename(folder: Folder, to name: String) {
         folder.name = name
-        folderManager.update(folder: folder)
+        folderManager.rename(folder: folder, reloadClosure: viewTracker.chatListModeDidUpdate)
         viewTracker.chatListModeDidUpdate()
     }
 

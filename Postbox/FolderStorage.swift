@@ -71,6 +71,25 @@ final class FolderStorage {
         }
     }
 
+    // FIXME: Workaroud for problem with not changing name on folder list tab.
+    func rename(folder: Folder, updateClosure: () -> Void) {
+        guard let managedFolder = cachedFolders[folder.folderId] else {
+            return assertionFailure("Folder \(folder.name) either does not exist or in-memory cache was corrupted.")
+        }
+
+        syncronise(managedFolder: managedFolder, with: folder)
+
+        folderListUpdate?([])
+        updateClosure()
+        folderListUpdate?(getAllFolders())
+
+        do {
+            try context.save()
+        } catch {
+            print(error)
+        }
+    }
+
     /// Udpates folder.
     ///
     /// - Note: If `peerIds` set contains no elements for the folder, it'll be removed instead of being updated.
@@ -87,6 +106,8 @@ final class FolderStorage {
             context.delete(managedFolder)
             cachedFolders.removeValue(forKey: folder.folderId)
         }
+
+        folderListUpdate?(getAllFolders())
 
         do {
             try context.save()

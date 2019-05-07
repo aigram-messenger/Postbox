@@ -82,6 +82,10 @@ final class FolderManager {
         }
     }
 
+    func rename(folder: Folder, reloadClosure: @escaping () -> Void) {
+        folderStorage.rename(folder: folder, updateClosure: reloadClosure)
+    }
+
     func update(folder: Folder) {
         folderStorage.update(folder: folder)
     }
