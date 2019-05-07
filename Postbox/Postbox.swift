@@ -3580,6 +3580,12 @@ public extension Postbox {
         viewTracker.chatListModeDidUpdate()
     }
 
+    public func rename(folder: Folder, to name: String) {
+        folder.name = name
+        folderManager.update(folder: folder)
+        viewTracker.chatListModeDidUpdate()
+    }
+
     public func remove(peerWithId peerId: PeerId, from folder: Folder) {
         folder.peerIds.remove(peerId)
 
