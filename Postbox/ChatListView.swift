@@ -303,7 +303,7 @@ final class MutableChatListView {
 
     var chatListMode: InternalChatListMode = .standard
     var applyFiltration: Bool = false
-    var unreadCategoriesCallback: ([FilterType]) -> Void = { _ in }
+    var unreadCategoriesCallback: UnreadCategoriesCallback = { _ in }
     var isIncluded: IsIncludedClosure = { _, _ in true }
     var folderManagerUpdateToken: FolderManager.UpdateToken?
 
@@ -850,8 +850,8 @@ public final class ChatListView {
 // MARK: - Getting unread categories
 
 // FIXME: Remake. Remove FilterType from here.
-private func getUnreadCategories(from entries: [MutableChatListEntry], isIncluded: IsIncludedClosure) -> [FilterType] {
-    var unreadCategories: Set<FilterType> = []
+private func getUnreadCategories(from entries: [MutableChatListEntry], isIncluded: IsIncludedClosure) -> [UnreadCategory] {
+    var unreadCategories: Set<UnreadCategory> = []
     for entry in entries {
         switch entry {
         case let .MessageEntry(_, _, readState, _, _, renderedPeer, _):
@@ -876,6 +876,7 @@ private func getUnreadCategories(from entries: [MutableChatListEntry], isInclude
 
     if !unreadCategories.isEmpty {
         unreadCategories.insert(.all)
+        unreadCategories.insert(.unread)
     }
 
     return unreadCategories.map { $0 }

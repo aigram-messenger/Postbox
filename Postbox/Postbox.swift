@@ -1082,7 +1082,7 @@ public final class Postbox {
 
     // MARK: - Unread categories
 
-    private var unreadCategoriesCallback: ([FilterType]) -> Void = { _ in }
+    private var unreadCategoriesCallback: UnreadCategoriesCallback = { _ in }
 
     // MARK: -
 
@@ -3463,6 +3463,15 @@ public final class Postbox {
         switch $2 {
             case .standard:
                 return $0
+            case .unread:
+                return $0.filter {
+                    switch $0 {
+                        case let .MessageEntry(_, _, readState, _, _, _, _):
+                            return readState.map { $0.isUnread } ?? false
+                        default:
+                            return false
+                    }
+                }
             case let .filter(filter):
                 return filter.filter(entries: $0)
             case let .folders(folders):
@@ -3531,6 +3540,8 @@ extension Postbox {
         switch chatListMode {
             case .standard:
                 chatListView.chatListMode = .standard
+            case .unread:
+                chatListView.chatListMode = .unread
             case let .filter(type):
                 let filter = GroupingFilter(
                     filterType: type,
@@ -3556,7 +3567,7 @@ extension Postbox {
 
 extension Postbox {
 
-    public func setUnreadCatigoriesCallback(_ unreadCategoriesCallback: @escaping ([FilterType]) -> Void) {
+    public func setUnreadCategoriesCallback(_ unreadCategoriesCallback: @escaping UnreadCategoriesCallback) {
         self.unreadCategoriesCallback = unreadCategoriesCallback
     }
 
