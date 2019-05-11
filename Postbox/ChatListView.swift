@@ -291,20 +291,13 @@ final class MutableChatListView {
     fileprivate var additionalItemEntries: [MutableChatListEntry]
     fileprivate var earlier: MutableChatListEntry?
     fileprivate var later: MutableChatListEntry?
-    fileprivate var entries: [MutableChatListEntry] {
-        didSet {
-            // TODO: Remove this.
-            unreadCategoriesCallback(getUnreadCategories(from: entries, isIncluded: isIncluded))
-        }
-    }
+    fileprivate var entries: [MutableChatListEntry]
     private var count: Int
 
     // MARK: -
 
     var chatListMode: InternalChatListMode = .standard
     var applyFiltration: Bool = false
-    var unreadCategoriesCallback: UnreadCategoriesCallback = { _ in }
-    var isIncluded: IsIncludedClosure = { _, _ in true }
     var folderManagerUpdateToken: FolderManager.UpdateToken?
 
     // MARK: -
@@ -844,43 +837,3 @@ public final class ChatListView {
         self.additionalItemEntries = additionalItemEntries
     }
 }
-
-// MARK: - Filtration
-
-// MARK: - Getting unread categories
-
-// FIXME: Remake. Remove FilterType from here.
-private func getUnreadCategories(from entries: [MutableChatListEntry], isIncluded: IsIncludedClosure) -> [UnreadCategory] {
-    var unreadCategories: Set<UnreadCategory> = []
-    for entry in entries {
-        switch entry {
-        case let .MessageEntry(_, _, readState, _, _, renderedPeer, _):
-            guard
-                let peer = renderedPeer.peer,
-                (readState?.isUnread ?? false) || (readState?.markedUnread ?? false)
-            else { break }
-
-            if isIncluded(peer, .privateChats) {
-                unreadCategories.insert(.privateChats)
-            } else if isIncluded(peer, .groups) {
-                unreadCategories.insert(.groups)
-            } else if isIncluded(peer, .channels) {
-                unreadCategories.insert(.channels)
-            } else if isIncluded(peer, .bots) {
-                unreadCategories.insert(.bots)
-            }
-        default:
-            break
-        }
-    }
-
-    if !unreadCategories.isEmpty {
-        unreadCategories.insert(.all)
-        unreadCategories.insert(.unread)
-    }
-
-    return unreadCategories.map { $0 }
-}
-
-// MARK: -  Chat list mode
-

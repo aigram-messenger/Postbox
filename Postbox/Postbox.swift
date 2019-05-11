@@ -1085,6 +1085,9 @@ public final class Postbox {
     // MARK: - Unread categories
 
     private var unreadCategoriesCallback: UnreadCategoriesCallback = { _ in }
+    private var unreadCategoriesDisposable: Disposable? {
+        didSet { oldValue?.dispose() }
+    }
 
     // MARK: - Unread messages
 
@@ -2743,8 +2746,6 @@ public final class Postbox {
             
             let mutableView = MutableChatListView(postbox: self, groupId: groupId, earlier: earlier, entries: entries, later: later, count: count, summaryComponents: summaryComponents)
 
-            mutableView.unreadCategoriesCallback = self.unreadCategoriesCallback
-            mutableView.isIncluded = self.isIncluded
             mutableView.applyFiltration = applyFiltration
             setupChatListModeHandler? { [weak self] in
                 self?.update(chatListView: mutableView, with: $0)
@@ -3532,6 +3533,7 @@ extension Postbox {
 
     private func setup() {
         watchChatListUpdates()
+        watchUnreadCategories()
     }
 
 }
@@ -3676,4 +3678,45 @@ public extension Postbox {
             })
     }
 
+    /// Initiates watching updates for the chat list in order to keep unread marks up to date.
+    private func watchUnreadCategories() {
+        unreadCategoriesDisposable = self.tailChatListView(groupId: nil, count: 0, summaryComponents: .init())
+            .start(next: { [weak self, isIncluded] chatListView, _ in
+                let unreadCategories = getUnreadCategories(from: chatListView.entries, isIncluded: isIncluded)
+                self?.unreadCategoriesCallback(unreadCategories)
+            })
+    }
+
+}
+
+private func getUnreadCategories(from entries: [ChatListEntry], isIncluded: IsIncludedClosure) -> [UnreadCategory] {
+    var unreadCategories: Set<UnreadCategory> = []
+    for entry in entries {
+        switch entry {
+        case let .MessageEntry(_, _, readState, _, _, renderedPeer, _):
+            guard
+                let peer = renderedPeer.peer,
+                (readState?.isUnread ?? false) || (readState?.markedUnread ?? false)
+            else { break }
+
+            if isIncluded(peer, .privateChats) {
+                unreadCategories.insert(.privateChats)
+            } else if isIncluded(peer, .groups) {
+                unreadCategories.insert(.groups)
+            } else if isIncluded(peer, .channels) {
+                unreadCategories.insert(.channels)
+            } else if isIncluded(peer, .bots) {
+                unreadCategories.insert(.bots)
+            }
+        default:
+            break
+        }
+    }
+
+    if !unreadCategories.isEmpty {
+        unreadCategories.insert(.all)
+        unreadCategories.insert(.unread)
+    }
+
+    return unreadCategories.map { $0 }
 }
