@@ -293,13 +293,21 @@ final class MutableChatListView {
     fileprivate var later: MutableChatListEntry?
     fileprivate var entries: [MutableChatListEntry] {
         didSet {
+            // TODO: Remove this.
             unreadCategoriesCallback(getUnreadCategories(from: entries, isIncluded: isIncluded))
         }
     }
     private var count: Int
 
+    // MARK: -
+
+    var chatListMode: InternalChatListMode = .standard
+    var applyFiltration: Bool = false
     var unreadCategoriesCallback: ([FilterType]) -> Void = { _ in }
     var isIncluded: IsIncludedClosure = { _, _ in true }
+    var folderManagerUpdateToken: FolderManager.UpdateToken?
+
+    // MARK: -
     
     init(postbox: Postbox, groupId: PeerGroupId?, earlier: MutableChatListEntry?, entries: [MutableChatListEntry], later: MutableChatListEntry?, count: Int, summaryComponents: ChatListEntrySummaryComponents) {
         self.groupId = groupId
@@ -792,11 +800,11 @@ public final class ChatListView {
     public let earlierIndex: ChatListIndex?
     public let laterIndex: ChatListIndex?
     
-    init(_ mutableView: MutableChatListView, filter: ([MutableChatListEntry]) -> [MutableChatListEntry]) {
+    init(_ mutableView: MutableChatListView, chatListHandler: ChatListFilterClosure) {
         self.groupId = mutableView.groupId
         
         var entries: [ChatListEntry] = []
-        for entry in filter(mutableView.entries) {
+        for entry in mutableView.applyFiltration ? chatListHandler(mutableView.entries, true, mutableView.chatListMode) : mutableView.entries {
             switch entry {
                 case let .MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, summaryInfo):
                     entries.append(.MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, summaryInfo))
@@ -818,7 +826,7 @@ public final class ChatListView {
         self.laterIndex = mutableView.later?.index
 
         var additionalItemEntries: [ChatListEntry] = []
-        for entry in filter(mutableView.additionalItemEntries) {
+        for entry in mutableView.applyFiltration ? chatListHandler(mutableView.additionalItemEntries, false, mutableView.chatListMode) : mutableView.additionalItemEntries {
             switch entry {
                 case let .MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, summaryInfo):
                     additionalItemEntries.append(.MessageEntry(index, message, combinedReadState, notificationSettings, embeddedState, peer, summaryInfo))
@@ -837,8 +845,11 @@ public final class ChatListView {
     }
 }
 
+// MARK: - Filtration
+
 // MARK: - Getting unread categories
 
+// FIXME: Remake. Remove FilterType from here.
 private func getUnreadCategories(from entries: [MutableChatListEntry], isIncluded: IsIncludedClosure) -> [FilterType] {
     var unreadCategories: Set<FilterType> = []
     for entry in entries {
@@ -869,4 +880,6 @@ private func getUnreadCategories(from entries: [MutableChatListEntry], isInclude
 
     return unreadCategories.map { $0 }
 }
+
+// MARK: -  Chat list mode
 

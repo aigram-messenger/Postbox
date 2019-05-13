@@ -25,7 +25,13 @@ final class ViewTracker {
     private let operationLogGetOperations: (PeerOperationLogTag, Int32, Int) -> [PeerMergedOperationLogEntry]
     private let operationLogGetTailIndex: (PeerOperationLogTag) -> Int32?
     private let getPreferencesEntry: (ValueBoxKey) -> PreferencesEntry?
-    private var filter: ([MutableChatListEntry]) -> [MutableChatListEntry]
+
+    // MARK: - Filtration
+
+//    private var filter: GroupingFilter
+    private let chatListHandler: ChatListFilterClosure
+
+    // MARK: -
     
     private var chatListViews = Bag<(MutableChatListView, ValuePipe<(ChatListView, ViewUpdateType)>)>()
     private var messageHistoryViews = Bag<(MutableMessageHistoryView, ValuePipe<(MessageHistoryView, ViewUpdateType)>)>()
@@ -60,7 +66,7 @@ final class ViewTracker {
     private var multiplePeersViews = Bag<(MutableMultiplePeersView, ValuePipe<MultiplePeersView>)>()
     private var itemCollectionsViews = Bag<(MutableItemCollectionsView, ValuePipe<ItemCollectionsView>)>()
     
-    init(queue: Queue, fetchAnchorIndex: @escaping (MessageId) -> InternalMessageHistoryAnchorIndex?, renderMessage: @escaping (IntermediateMessage) -> Message, getPeer: @escaping (PeerId) -> Peer?, getPeerNotificationSettings: @escaping (PeerId) -> PeerNotificationSettings?, getCachedPeerData: @escaping (PeerId) -> CachedPeerData?, getPeerPresence: @escaping (PeerId) -> PeerPresence?, getTotalUnreadState: @escaping () -> ChatListTotalUnreadState, getPeerReadState: @escaping (PeerId) -> CombinedPeerReadState?, operationLogGetOperations: @escaping (PeerOperationLogTag, Int32, Int) -> [PeerMergedOperationLogEntry], operationLogGetTailIndex: @escaping (PeerOperationLogTag) -> Int32?, getTimestampBasedMessageAttributesHead: @escaping (UInt16) -> TimestampBasedMessageAttributesEntry?, getPreferencesEntry: @escaping (ValueBoxKey) -> PreferencesEntry?, unsentMessageIds: [MessageId], synchronizePeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation], filter: @escaping ([MutableChatListEntry]) -> [MutableChatListEntry]) {
+    init(queue: Queue, fetchAnchorIndex: @escaping (MessageId) -> InternalMessageHistoryAnchorIndex?, renderMessage: @escaping (IntermediateMessage) -> Message, getPeer: @escaping (PeerId) -> Peer?, getPeerNotificationSettings: @escaping (PeerId) -> PeerNotificationSettings?, getCachedPeerData: @escaping (PeerId) -> CachedPeerData?, getPeerPresence: @escaping (PeerId) -> PeerPresence?, getTotalUnreadState: @escaping () -> ChatListTotalUnreadState, getPeerReadState: @escaping (PeerId) -> CombinedPeerReadState?, operationLogGetOperations: @escaping (PeerOperationLogTag, Int32, Int) -> [PeerMergedOperationLogEntry], operationLogGetTailIndex: @escaping (PeerOperationLogTag) -> Int32?, getTimestampBasedMessageAttributesHead: @escaping (UInt16) -> TimestampBasedMessageAttributesEntry?, getPreferencesEntry: @escaping (ValueBoxKey) -> PreferencesEntry?, unsentMessageIds: [MessageId], synchronizePeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation], chatListHandler: @escaping ChatListFilterClosure) {
         self.queue = queue
         self.fetchAnchorIndex = fetchAnchorIndex
         self.renderMessage = renderMessage
@@ -74,7 +80,8 @@ final class ViewTracker {
         self.operationLogGetTailIndex = operationLogGetTailIndex
         self.getTimestampBasedMessageAttributesHead = getTimestampBasedMessageAttributesHead
         self.getPreferencesEntry = getPreferencesEntry
-        self.filter = filter
+//        self.filter = filter
+        self.chatListHandler = chatListHandler
 
         self.unsentMessageView = UnsentMessageHistoryView(ids: unsentMessageIds)
         self.synchronizeReadStatesView = MutableSynchronizePeerReadStatesView(operations: synchronizePeerReadStateOperations)
@@ -289,7 +296,7 @@ final class ViewTracker {
                 mutableView.render(postbox: postbox, renderMessage: self.renderMessage, getPeer: { id in
                     return self.getPeer(id)
                 }, getPeerNotificationSettings: self.getPeerNotificationSettings)
-                pipe.putNext((ChatListView(mutableView, filter: filter), .Generic))
+                pipe.putNext((ChatListView(mutableView, chatListHandler: chatListHandler), .Generic))
             }
         }
         
@@ -431,7 +438,7 @@ final class ViewTracker {
                     mutableView.render(postbox: postbox, renderMessage: self.renderMessage, getPeer: { id in
                         return self.getPeer(id)
                     }, getPeerNotificationSettings: self.getPeerNotificationSettings)
-                    pipe.putNext((ChatListView(mutableView, filter: filter), .Generic))
+                    pipe.putNext((ChatListView(mutableView, chatListHandler: chatListHandler), .Generic))
                 }
             }
             
@@ -658,10 +665,10 @@ final class ViewTracker {
 
 extension ViewTracker {
 
-    func updateFilters(with filter: @escaping ([MutableChatListEntry]) -> [MutableChatListEntry]) {
-        self.filter = filter
+    func chatListModeDidUpdate() {
+        // TODO: Optimise this function. Generate new views only for updated mutable chat list views.
         for (mutableView, pipe) in self.chatListViews.copyItems() {
-            pipe.putNext((ChatListView(mutableView, filter: filter), .Generic))
+            pipe.putNext((ChatListView(mutableView, chatListHandler: chatListHandler), .Generic))
         }
     }
 
