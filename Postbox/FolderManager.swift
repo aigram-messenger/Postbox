@@ -92,6 +92,10 @@ final class FolderManager {
 
     // MARK: -
 
+    func isIncludedInAnyFolder(peerId: PeerId) -> Bool {
+        return cachedFolders.first { $0.peerIds.contains(peerId) } != nil
+    }
+
     func subscribe(onUpdates updateClosure: @escaping UpdateClosure) -> UpdateToken {
         let token = UpdateToken(folderManager: self, updateClosure: updateClosure)
         updateTokens.append(WeakRef(value: token))

@@ -3573,12 +3573,54 @@ extension Postbox {
 
 // MARK: - Getting unread categories
 
+private typealias HasFolderClosure = (PeerId) -> Bool
+
 extension Postbox {
 
     public func setUnreadCategoriesCallback(_ unreadCategoriesCallback: @escaping UnreadCategoriesCallback) {
         self.unreadCategoriesCallback = unreadCategoriesCallback
     }
 
+}
+
+private func getUnreadCategories(
+    from entries: [ChatListEntry],
+    isIncluded: IsIncludedClosure,
+    hasFolder: HasFolderClosure
+) -> [UnreadCategory] {
+    var unreadCategories: Set<UnreadCategory> = []
+    for entry in entries {
+        switch entry {
+        case let .MessageEntry(_, _, readState, _, _, renderedPeer, _):
+            guard
+                let peer = renderedPeer.peer,
+                (readState?.isUnread ?? false) || (readState?.markedUnread ?? false)
+            else { break }
+
+            if isIncluded(peer, .privateChats) {
+                unreadCategories.insert(.privateChats)
+            } else if isIncluded(peer, .groups) {
+                unreadCategories.insert(.groups)
+            } else if isIncluded(peer, .channels) {
+                unreadCategories.insert(.channels)
+            } else if isIncluded(peer, .bots) {
+                unreadCategories.insert(.bots)
+            }
+
+            if !unreadCategories.contains(.folders) && hasFolder(peer.id) {
+                unreadCategories.insert(.folders)
+            }
+        default:
+            break
+        }
+    }
+
+    if !unreadCategories.isEmpty {
+        unreadCategories.insert(.all)
+        unreadCategories.insert(.unread)
+    }
+
+    return unreadCategories.map { $0 }
 }
 
 // MARK: - Folders
@@ -3678,42 +3720,10 @@ public extension Postbox {
     /// Initiates watching updates for the chat list in order to keep unread marks up to date.
     private func watchUnreadCategories() {
         unreadCategoriesDisposable = self.tailChatListView(groupId: nil, count: 0, summaryComponents: .init())
-            .start(next: { [weak self, isIncluded] chatListView, _ in
-                let unreadCategories = getUnreadCategories(from: chatListView.entries, isIncluded: isIncluded)
+            .start(next: { [weak self, isIncluded, folderManager] chatListView, _ in
+                let unreadCategories = getUnreadCategories(from: chatListView.entries, isIncluded: isIncluded, hasFolder: folderManager.isIncludedInAnyFolder)
                 self?.unreadCategoriesCallback(unreadCategories)
             })
     }
 
-}
-
-private func getUnreadCategories(from entries: [ChatListEntry], isIncluded: IsIncludedClosure) -> [UnreadCategory] {
-    var unreadCategories: Set<UnreadCategory> = []
-    for entry in entries {
-        switch entry {
-        case let .MessageEntry(_, _, readState, _, _, renderedPeer, _):
-            guard
-                let peer = renderedPeer.peer,
-                (readState?.isUnread ?? false) || (readState?.markedUnread ?? false)
-            else { break }
-
-            if isIncluded(peer, .privateChats) {
-                unreadCategories.insert(.privateChats)
-            } else if isIncluded(peer, .groups) {
-                unreadCategories.insert(.groups)
-            } else if isIncluded(peer, .channels) {
-                unreadCategories.insert(.channels)
-            } else if isIncluded(peer, .bots) {
-                unreadCategories.insert(.bots)
-            }
-        default:
-            break
-        }
-    }
-
-    if !unreadCategories.isEmpty {
-        unreadCategories.insert(.all)
-        unreadCategories.insert(.unread)
-    }
-
-    return unreadCategories.map { $0 }
 }

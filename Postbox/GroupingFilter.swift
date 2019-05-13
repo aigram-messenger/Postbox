@@ -41,6 +41,7 @@ public enum UnreadCategory {
     case channels
     case bots
     case all
+    case folders
 }
 
 public enum FilterType {
