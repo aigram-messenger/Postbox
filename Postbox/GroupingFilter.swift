@@ -9,6 +9,7 @@
 // FIXME: Move to TelegramUI.
 public enum ChatListMode {
     case standard
+    case unread
     case filter(type: FilterType)
     case folders
 
@@ -21,6 +22,7 @@ public enum ChatListMode {
 // FIXME: Rename to something more appropriate.
 enum InternalChatListMode {
     case standard
+    case unread
     case filter(GroupingFilter)
     case folders([Folder])
 
@@ -28,6 +30,17 @@ enum InternalChatListMode {
         guard case .folders = self else { return false }
         return true
     }
+}
+
+public typealias UnreadCategoriesCallback = ([UnreadCategory]) -> Void
+
+public enum UnreadCategory {
+    case privateChats
+    case unread
+    case groups
+    case channels
+    case bots
+    case all
 }
 
 public enum FilterType {

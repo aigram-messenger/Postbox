@@ -1074,7 +1074,9 @@ public final class Postbox {
     // MARK: - Folders
 
     private let folderManager: FolderManager = .shared
-    private var messagesDisposable: Disposable?
+    private var incomingMessagesDisposable: Disposable? {
+        didSet { oldValue?.dispose() }
+    }
 
     // MARK: - Filtration
 
@@ -1082,7 +1084,16 @@ public final class Postbox {
 
     // MARK: - Unread categories
 
-    private var unreadCategoriesCallback: ([FilterType]) -> Void = { _ in }
+    private var unreadCategoriesCallback: UnreadCategoriesCallback = { _ in }
+    private var unreadCategoriesDisposable: Disposable? {
+        didSet { oldValue?.dispose() }
+    }
+
+    // MARK: - Unread messages
+
+    private var readAllIncomingMessagesDisposable: Disposable? {
+        didSet { oldValue?.dispose() }
+    }
 
     // MARK: -
 
@@ -1337,7 +1348,8 @@ public final class Postbox {
     }
     
     deinit {
-        messagesDisposable?.dispose()
+        incomingMessagesDisposable?.dispose()
+        readAllIncomingMessagesDisposable?.dispose()
         assert(true)
     }
     
@@ -2734,8 +2746,6 @@ public final class Postbox {
             
             let mutableView = MutableChatListView(postbox: self, groupId: groupId, earlier: earlier, entries: entries, later: later, count: count, summaryComponents: summaryComponents)
 
-            mutableView.unreadCategoriesCallback = self.unreadCategoriesCallback
-            mutableView.isIncluded = self.isIncluded
             mutableView.applyFiltration = applyFiltration
             setupChatListModeHandler? { [weak self] in
                 self?.update(chatListView: mutableView, with: $0)
@@ -3463,6 +3473,13 @@ public final class Postbox {
         switch $2 {
             case .standard:
                 return $0
+            case .unread:
+                return $0.filter {
+                    guard case let .MessageEntry(_, _, readState, _, _, _, _) = $0 else {
+                        return false
+                    }
+                    return readState.map { $0.isUnread } ?? false
+                }
             case let .filter(filter):
                 return filter.filter(entries: $0)
             case let .folders(folders):
@@ -3502,7 +3519,6 @@ public final class Postbox {
 
                         return .MessageEntry(chatListIndex, $0.lastMessage, nil, nil, nil, renderedPeer, .init())
                     }
-
         }
     }
 
@@ -3514,6 +3530,7 @@ extension Postbox {
 
     private func setup() {
         watchChatListUpdates()
+        watchUnreadCategories()
     }
 
 }
@@ -3531,6 +3548,8 @@ extension Postbox {
         switch chatListMode {
             case .standard:
                 chatListView.chatListMode = .standard
+            case .unread:
+                chatListView.chatListMode = .unread
             case let .filter(type):
                 let filter = GroupingFilter(
                     filterType: type,
@@ -3556,7 +3575,7 @@ extension Postbox {
 
 extension Postbox {
 
-    public func setUnreadCatigoriesCallback(_ unreadCategoriesCallback: @escaping ([FilterType]) -> Void) {
+    public func setUnreadCategoriesCallback(_ unreadCategoriesCallback: @escaping UnreadCategoriesCallback) {
         self.unreadCategoriesCallback = unreadCategoriesCallback
     }
 
@@ -3595,7 +3614,6 @@ public extension Postbox {
 
     public func add(peerIds: [PeerId], to folder: Folder) {
         peerIds.forEach { folder.peerIds.insert($0) }
-
         folderManager.update(folder: folder)
         viewTracker.chatListModeDidUpdate()
     }
@@ -3610,9 +3628,29 @@ public extension Postbox {
         viewTracker.chatListModeDidUpdate()
     }
 
+    public func readAllIncomingMessages() {
+        readAllIncomingMessagesDisposable?.dispose()
+        readAllIncomingMessagesDisposable = (tailChatListView(groupId: nil, count: 0, summaryComponents: .init(), applyFiltration: false, setupChatListModeHandler: nil)
+            |> take(1)
+            |> map { (chatListView, _) -> [MessageIndex] in
+                return chatListView.entries.compactMap {
+                    guard
+                        case let .MessageEntry(index, _, readState?, _, _, _, _) = $0,
+                        readState.isUnread
+                    else { return nil }
+
+                    return index.messageIndex
+                }
+            }).start(next: { [weak self] in
+                $0.forEach {
+                    _ = self?.applyInteractiveReadMaxIndex($0)
+                }
+            })
+    }
+
     /// Initiates watching updates for the chat list in order to keep folders up to date.
     private func watchChatListUpdates() {
-        messagesDisposable = self.tailChatListView(groupId: nil, count: 0, summaryComponents: .init())
+        incomingMessagesDisposable = self.tailChatListView(groupId: nil, count: 0, summaryComponents: .init())
             .start(next: { [weak folderManager] chatListView, update in
                 var messages: [(message: Message, chat: Peer)] = []
                 switch update {
@@ -3637,4 +3675,45 @@ public extension Postbox {
             })
     }
 
+    /// Initiates watching updates for the chat list in order to keep unread marks up to date.
+    private func watchUnreadCategories() {
+        unreadCategoriesDisposable = self.tailChatListView(groupId: nil, count: 0, summaryComponents: .init())
+            .start(next: { [weak self, isIncluded] chatListView, _ in
+                let unreadCategories = getUnreadCategories(from: chatListView.entries, isIncluded: isIncluded)
+                self?.unreadCategoriesCallback(unreadCategories)
+            })
+    }
+
+}
+
+private func getUnreadCategories(from entries: [ChatListEntry], isIncluded: IsIncludedClosure) -> [UnreadCategory] {
+    var unreadCategories: Set<UnreadCategory> = []
+    for entry in entries {
+        switch entry {
+        case let .MessageEntry(_, _, readState, _, _, renderedPeer, _):
+            guard
+                let peer = renderedPeer.peer,
+                (readState?.isUnread ?? false) || (readState?.markedUnread ?? false)
+            else { break }
+
+            if isIncluded(peer, .privateChats) {
+                unreadCategories.insert(.privateChats)
+            } else if isIncluded(peer, .groups) {
+                unreadCategories.insert(.groups)
+            } else if isIncluded(peer, .channels) {
+                unreadCategories.insert(.channels)
+            } else if isIncluded(peer, .bots) {
+                unreadCategories.insert(.bots)
+            }
+        default:
+            break
+        }
+    }
+
+    if !unreadCategories.isEmpty {
+        unreadCategories.insert(.all)
+        unreadCategories.insert(.unread)
+    }
+
+    return unreadCategories.map { $0 }
 }
