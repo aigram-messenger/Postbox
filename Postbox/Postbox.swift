@@ -3475,12 +3475,10 @@ public final class Postbox {
                 return $0
             case .unread:
                 return $0.filter {
-                    switch $0 {
-                        case let .MessageEntry(_, _, readState, _, _, _, _):
-                            return readState.map { $0.isUnread } ?? false
-                        default:
-                            return false
+                    guard case let .MessageEntry(_, _, readState, _, _, _, _) = $0 else {
+                        return false
                     }
+                    return readState.map { $0.isUnread } ?? false
                 }
             case let .filter(filter):
                 return filter.filter(entries: $0)
@@ -3521,7 +3519,6 @@ public final class Postbox {
 
                         return .MessageEntry(chatListIndex, $0.lastMessage, nil, nil, nil, renderedPeer, .init())
                     }
-
         }
     }
 
