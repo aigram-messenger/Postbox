@@ -20,6 +20,10 @@ final class FolderManager {
         didSet { sendFoldersToAllObservers(folders) }
     }
 
+    private var cachedUnreadCounts: [Folder.Id: UInt] = [:] {
+        didSet { sendFoldersToAllObservers(folders) }
+    }
+
     // MARK: - Components
 
     private let folderStorage: FolderStorage = .shared
@@ -33,6 +37,7 @@ final class FolderManager {
         return cachedFolders
             .map {
                 $0.lastMessage = cachedLastMessages[$0.folderId]
+                $0.unreadCount = cachedUnreadCounts[$0.folderId]
                 return $0
             }
             .sorted {
@@ -157,8 +162,23 @@ final class FolderManager {
         return true
     }
 
-    func process(messages: [(message: Message, chat: Peer)]) {
-        let filteredMessages: [PeerId: (message: Message, chat: Peer)] = messages.reduce(into: [:]) {
+    func process(readStates: [(chat: Peer, readState: CombinedPeerReadState)]) {
+        let unreadCountsForPeer = readStates
+            .lazy
+            .map { ($0.id, UInt($1.count)) }
+            .dict(+)
+
+        cachedUnreadCounts = cachedFolders
+            .map { folder in
+                (
+                    key: folder.folderId,
+                    value: folder.peerIds.reduce(0) { $0 + unreadCountsForPeer[$1].or(0) }
+                )
+            }.collect()
+    }
+
+    func process(messages: [(chat: Peer, message: Message)]) {
+        let filteredMessages: [PeerId: (chat: Peer, message: Message)] = messages.reduce(into: [:]) {
             if let oldValue = $0[$1.chat.id] {
                 guard oldValue.message.timestamp < $1.message.timestamp else { return }
                 $0[$1.chat.id] = $1

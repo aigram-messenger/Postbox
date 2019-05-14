@@ -15,6 +15,7 @@ public final class Folder {
     public var name: String
     public var peerIds: Set<PeerId>
     public var lastMessage: Message?
+    public var unreadCount: UInt?
     public var pinningIndex: UInt16?
 
     init(

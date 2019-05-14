@@ -9,7 +9,7 @@
 /* Begin PBXBuildFile section */
 		18045D54227198E400A6A473 /* NSPersistentContainer+ClassInit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18045D53227198E400A6A473 /* NSPersistentContainer+ClassInit.swift */; };
 		18045D562271997200A6A473 /* NSManagedObjectModel+ClassInit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18045D552271997200A6A473 /* NSManagedObjectModel+ClassInit.swift */; };
-		18045D582271A84000A6A473 /* Optional+NonNilAssertion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18045D572271A84000A6A473 /* Optional+NonNilAssertion.swift */; };
+		18045D582271A84000A6A473 /* Optional+Helpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18045D572271A84000A6A473 /* Optional+Helpers.swift */; };
 		18045D5A2271A87400A6A473 /* Sequence+Collect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18045D592271A87400A6A473 /* Sequence+Collect.swift */; };
 		18182A322265C92000A2FF86 /* FolderManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18182A312265C92000A2FF86 /* FolderManager.swift */; };
 		18182A342265C95800A2FF86 /* Folder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18182A332265C95800A2FF86 /* Folder.swift */; };
@@ -411,7 +411,7 @@
 /* Begin PBXFileReference section */
 		18045D53227198E400A6A473 /* NSPersistentContainer+ClassInit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NSPersistentContainer+ClassInit.swift"; sourceTree = "<group>"; };
 		18045D552271997200A6A473 /* NSManagedObjectModel+ClassInit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NSManagedObjectModel+ClassInit.swift"; sourceTree = "<group>"; };
-		18045D572271A84000A6A473 /* Optional+NonNilAssertion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Optional+NonNilAssertion.swift"; sourceTree = "<group>"; };
+		18045D572271A84000A6A473 /* Optional+Helpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Optional+Helpers.swift"; sourceTree = "<group>"; };
 		18045D592271A87400A6A473 /* Sequence+Collect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sequence+Collect.swift"; sourceTree = "<group>"; };
 		18182A312265C92000A2FF86 /* FolderManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderManager.swift; sourceTree = "<group>"; };
 		18182A332265C95800A2FF86 /* Folder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Folder.swift; sourceTree = "<group>"; };
@@ -657,7 +657,7 @@
 			children = (
 				18045D53227198E400A6A473 /* NSPersistentContainer+ClassInit.swift */,
 				18045D552271997200A6A473 /* NSManagedObjectModel+ClassInit.swift */,
-				18045D572271A84000A6A473 /* Optional+NonNilAssertion.swift */,
+				18045D572271A84000A6A473 /* Optional+Helpers.swift */,
 				18045D592271A87400A6A473 /* Sequence+Collect.swift */,
 			);
 			name = Extensions;
@@ -1581,7 +1581,7 @@
 				D0977F9C1B822DB4009994B2 /* ValueBox.swift in Sources */,
 				D07516441B2D9CEF00AE42E0 /* sqlite3.c in Sources */,
 				D001388620BD942B007C9721 /* PostboxUpgrade_16to17.swift in Sources */,
-				18045D582271A84000A6A473 /* Optional+NonNilAssertion.swift in Sources */,
+				18045D582271A84000A6A473 /* Optional+Helpers.swift in Sources */,
 				1863C2B122564275003D5CB2 /* GroupingFilter.swift in Sources */,
 				D0D511001D64A58900A97B8A /* IpcPipe.swift in Sources */,
 				D01C7EDE1EF73F71008305F1 /* MessageHistoryTextIndexTable.swift in Sources */,

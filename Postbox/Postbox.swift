@@ -3513,11 +3513,24 @@ public final class Postbox {
                         guard let message = $0.lastMessage else { return nil }
 
                         let renderedPeer = RenderedPeer(peer: $0)
-
                         let messageIndex = MessageIndex(id: message.id, timestamp: message.timestamp)
                         let chatListIndex = ChatListIndex(pinningIndex: $0.pinningIndex, messageIndex: messageIndex)
 
-                        return .MessageEntry(chatListIndex, $0.lastMessage, nil, nil, nil, renderedPeer, .init())
+                        let combinedReadState = CombinedPeerReadState(
+                            states: [
+                                (
+                                    message.id.namespace,
+                                    .indexBased(
+                                        maxIncomingReadIndex: messageIndex,
+                                        maxOutgoingReadIndex: messageIndex,
+                                        count: Int32($0.unreadCount ?? 0),
+                                        markedUnread: false
+                                    )
+                                )
+                            ]
+                        )
+
+                        return .MessageEntry(chatListIndex, $0.lastMessage, combinedReadState, nil, nil, renderedPeer, .init())
                     }
         }
     }
@@ -3590,12 +3603,11 @@ private func getUnreadCategories(
 ) -> [UnreadCategory] {
     var unreadCategories: Set<UnreadCategory> = []
     for entry in entries {
-        switch entry {
-        case let .MessageEntry(_, _, readState, _, _, renderedPeer, _):
+        if case let .MessageEntry(_, _, readState, _, _, renderedPeer, _) = entry {
             guard
                 let peer = renderedPeer.peer,
                 (readState?.isUnread ?? false) || (readState?.markedUnread ?? false)
-            else { break }
+            else { continue }
 
             if isIncluded(peer, .privateChats) {
                 unreadCategories.insert(.privateChats)
@@ -3610,8 +3622,6 @@ private func getUnreadCategories(
             if !unreadCategories.contains(.folders) && hasFolder(peer.id) {
                 unreadCategories.insert(.folders)
             }
-        default:
-            break
         }
     }
 
@@ -3620,7 +3630,7 @@ private func getUnreadCategories(
         unreadCategories.insert(.unread)
     }
 
-    return unreadCategories.map { $0 }
+    return unreadCategories.collect()
 }
 
 // MARK: - Folders
@@ -3649,7 +3659,6 @@ public extension Postbox {
 
     public func remove(peerWithId peerId: PeerId, from folder: Folder) {
         folder.peerIds.remove(peerId)
-
         folderManager.update(folder: folder)
         viewTracker.chatListModeDidUpdate()
     }
@@ -3694,26 +3703,33 @@ public extension Postbox {
     private func watchChatListUpdates() {
         incomingMessagesDisposable = self.tailChatListView(groupId: nil, count: 0, summaryComponents: .init())
             .start(next: { [weak folderManager] chatListView, update in
-                var messages: [(message: Message, chat: Peer)] = []
-                switch update {
-                    case let .InitialUnread(index):
-                        break
-                    case .Generic:
-                        messages = chatListView.entries.compactMap {
-                            guard
-                                case let .MessageEntry(_, message?, _, _, _, renderedPeer, _) = $0,
-                                let peer = renderedPeer.peer
-                            else { return nil }
+                var messages: [(chat: Peer, message: Message)] = []
+                var readStates: [(chat: Peer, readState: CombinedPeerReadState)] = []
 
-                            return (message: message, chat: peer)
+                if case .Generic = update {
+                    chatListView.entries.forEach {
+                        guard
+                            case let .MessageEntry(_, message, readState, _, _, renderedPeer, _) = $0,
+                            let peer = renderedPeer.peer
+                        else { return }
+
+                        if let message = message {
+                            messages.append((chat: peer, message: message))
                         }
-                    case let .FillHole(insertions, deletions):
-                        break
-                    case .UpdateVisible:
-                        break
+
+                        if let readState = readState {
+                            readStates.append((chat: peer, readState: readState))
+                        }
+                    }
                 }
-                guard !messages.isEmpty else { return }
-                folderManager?.process(messages: messages)
+
+                if !messages.isEmpty {
+                    folderManager?.process(messages: messages)
+                }
+
+                if !readStates.isEmpty {
+                    folderManager?.process(readStates: readStates)
+                }
             })
     }
 
@@ -3721,7 +3737,11 @@ public extension Postbox {
     private func watchUnreadCategories() {
         unreadCategoriesDisposable = self.tailChatListView(groupId: nil, count: 0, summaryComponents: .init())
             .start(next: { [weak self, isIncluded, folderManager] chatListView, _ in
-                let unreadCategories = getUnreadCategories(from: chatListView.entries, isIncluded: isIncluded, hasFolder: folderManager.isIncludedInAnyFolder)
+                let unreadCategories = getUnreadCategories(
+                    from: chatListView.entries,
+                    isIncluded: isIncluded,
+                    hasFolder: folderManager.isIncludedInAnyFolder
+                )
                 self?.unreadCategoriesCallback(unreadCategories)
             })
     }

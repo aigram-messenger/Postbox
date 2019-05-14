@@ -8,6 +8,14 @@
 
 public extension Sequence {
 
+    func collect<K: Hashable, V>() -> [K: V] where Self.Element == (K, V) {
+        return dict { val, _ in val }
+    }
+
+    func dict<K: Hashable, V>(_ combine: (V, V) -> V) -> [K: V] where Self.Element == (K, V) {
+        return .init(self, uniquingKeysWith: combine)
+    }
+
     func collect() -> [Element] {
         return map { $0 }
     }

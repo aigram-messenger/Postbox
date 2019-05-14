@@ -8,6 +8,10 @@
 
 extension Optional {
 
+    func or(_ other: Wrapped) -> Wrapped {
+        return self ?? other
+    }
+
     func assertNonNil(_ message: String = "Non-nil assertion failed.") -> Wrapped? {
         assert(self != nil, message)
         return self
